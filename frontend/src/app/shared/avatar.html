@@ -1,0 +1,4 @@
+<span class="avatar" [class.avatar-lg]="large">
+    @if (person.avatarUrl) { <img [src]="person.avatarUrl" [alt]="'Foto de ' + person.nombre"> }
+    @else { <span>{{ person.nombre.charAt(0) }}{{ person.apellido.charAt(0) }}</span> }
+  </span>

@@ -1,0 +1,5 @@
+<header class="site-header"><div class="site-header-inner">
+    <a routerLink="/publicaciones" class="site-brand"><app-mark/><span>trama<span class="brand-period">.</span></span></a>
+    <nav aria-label="Navegación principal"><a routerLink="/publicaciones" routerLinkActive="active">Explorar</a><a routerLink="/mi-perfil" routerLinkActive="active">Mi perfil</a></nav>
+    <div class="header-user"><span class="header-hello">Hola, {{ auth.user()?.nombre }}</span><a routerLink="/mi-perfil" aria-label="Ir a mi perfil">@if (auth.user(); as user) { <app-avatar [person]="user"/> }</a><button type="button" class="icon-button logout-button" (click)="logout()" aria-label="Cerrar sesión" title="Cerrar sesión">↗</button></div>
+  </div></header>

@@ -1,0 +1,16 @@
+<main class="auth-layout"><app-auth-visual/><section class="auth-main">
+    <div class="auth-top-link">¿Primera vez acá? <a routerLink="/registro">Crear cuenta <span>↗</span></a></div>
+    <div class="auth-form-wrap"><div class="auth-kicker"><span class="kicker-line"></span> BIENVENIDO DE NUEVO</div><h2>Qué bueno <em>verte.</em></h2><p class="auth-subtitle">Tu espacio está justo donde lo dejaste. Ingresá y seguí la conversación.</p>
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <label for="identifier">Correo o nombre de usuario</label><input id="identifier" formControlName="identifier" autocomplete="username" placeholder="tu@correo.com o @usuario" [attr.aria-invalid]="form.controls.identifier.invalid && form.controls.identifier.touched">
+        @if (form.controls.identifier.invalid && form.controls.identifier.touched) { <small class="field-error">Ingresá tu correo o nombre de usuario.</small> }
+        <label for="password">Contraseña</label><div class="password-wrap"><input id="password" formControlName="password" [type]="showPassword() ? 'text' : 'password'" autocomplete="current-password" placeholder="Tu contraseña" [attr.aria-invalid]="form.controls.password.invalid && form.controls.password.touched"><button type="button" (click)="showPassword.set(!showPassword())">{{ showPassword() ? 'Ocultar' : 'Ver' }}</button></div>
+        @if (form.controls.password.invalid && form.controls.password.touched) { <small class="field-error">Necesitás 8 caracteres, una mayúscula y un número.</small> }
+        <a class="forgot-password-link" routerLink="/recuperar-contrasena">Olvidé mi contraseña <span>↗</span></a>
+        @if (error()) { <div class="form-message error" role="alert">{{ error() }}</div> }
+        <button class="primary-button auth-submit" type="submit" [disabled]="loading()">{{ loading() ? 'Ingresando…' : 'Ingresar a Trama' }} <span>↗</span></button>
+      </form>
+      <p class="auth-footnote">Al entrar, volvés a un espacio hecho para compartir.</p>
+    </div>
+    <div class="auth-main-bottom">TRAMA © 2026 <span>HECHO PARA ENCONTRARNOS</span></div>
+  </section></main>

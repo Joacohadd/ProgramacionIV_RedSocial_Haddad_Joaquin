@@ -1,0 +1,41 @@
+<app-site-header/><main class="page-shell profile-page">
+    <div class="profile-crumb"><a routerLink="/publicaciones">← Volver a explorar</a><span>PERFIL / 01</span></div>
+    @if (auth.user(); as user) {
+      <section class="profile-hero"><div class="profile-hero-decoration" aria-hidden="true">✳</div><div class="profile-avatar-wrap"><app-avatar [person]="user" [large]="true"/><span class="avatar-badge">MI ESPACIO</span></div><div class="profile-identity"><span class="eyebrow">ESTA ES TU HISTORIA <span class="eyebrow-star">✳</span></span><h1>{{ user.nombre }}<br><em>{{ user.apellido }}.</em></h1><p class="profile-handle">＠{{ user.username }}</p><p class="profile-bio">{{ user.bio }}</p><button #editTrigger class="profile-edit" type="button" (click)="openEditor()">Editar perfil <span>↗</span></button>@if (saved()) { <span class="profile-saved" role="status">✳ Tu perfil se actualizó.</span> }</div><div class="profile-hero-index">TU PERFIL EN TRAMA — 2026</div></section>
+      <div class="profile-columns"><section class="profile-info"><span class="section-index"> SOBRE VOS</span><h2>Un poco más <em>de vos.</em></h2><dl><div><dt>NOMBRE COMPLETO</dt><dd>{{ user.nombre }} {{ user.apellido }}</dd></div><div><dt>USUARIO</dt><dd>＠{{ user.username }}</dd></div><div><dt>CORREO</dt><dd>{{ user.email }}</dd></div><div><dt>FECHA DE NACIMIENTO</dt><dd>{{ user.fechaNacimiento | date:'dd MMMM yyyy':'':'es-AR' }}</dd></div><div><dt>TIPO DE PERFIL</dt><dd class="role-tag">{{ user.role }}</dd></div></dl><div class="profile-info-foot">✳ <span>Cada voz suma algo único a esta trama.</span></div></section>
+      <section class="profile-posts"><div class="profile-posts-heading"><div><span class="section-index">TU ACTIVIDAD</span><h2>Tus últimas <em>historias.</em></h2></div><a routerLink="/publicaciones">Ver el feed ↗</a></div>
+        @if (error()) { <div class="form-message error" role="alert">{{ error() }} <button type="button" (click)="load()">Reintentar</button></div> }
+        @if (loading()) { <div class="feed-loading"><span class="loading-orbit"></span> Buscando tus publicaciones…</div> }
+        @else if (posts().length === 0 && !error()) { <div class="profile-empty"><span>✳</span><h3>Aún no publicaste nada.</h3><p>Tu primera historia puede empezar hoy.</p><a routerLink="/publicaciones" class="primary-button">Ir a publicar ↗</a></div> }
+        @else { @for (post of posts(); track post.id; let i = $index) { <div class="profile-post-item"><app-post-card [post]="post" [index]="i + 1" [busy]="busyId() === post.id" (like)="toggleLike($event)"/><div class="comments-preview"><span>◇</span><div><strong>Comentarios · vista preliminar</strong><p>La conversación en cada publicación estará disponible en el Sprint 3.</p></div><span class="preview-tag">PRÓXIMAMENTE</span></div></div> } }
+      </section></div>
+    }
+  </main>
+  @if (editing()) {
+    <div class="modal-backdrop" (click)="closeEditor()">
+      <div class="modal-card profile-edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-profile-title" aria-describedby="edit-profile-description" (click)="$event.stopPropagation()" (keydown.escape)="closeEditor()">
+        <div class="modal-top"><span class="section-index">MI PERFIL / EDICIÓN</span><button type="button" class="modal-close" [disabled]="saving()" (click)="closeEditor()" aria-label="Cerrar edición">×</button></div>
+        <h2 id="edit-profile-title">Tu historia, <em>a tu manera.</em></h2>
+        <p id="edit-profile-description">Actualizá cómo te ven las demás personas en Trama.</p>
+        <form [formGroup]="editForm" (ngSubmit)="saveProfile()" novalidate>
+          <div class="profile-edit-photo">
+            <div class="profile-edit-avatar">
+              @if (avatarPreview(); as preview) { <img [src]="preview" alt="Vista previa de tu nueva foto"> }
+              @else { @if (auth.user(); as currentUser) { <app-avatar [person]="currentUser"/> } }
+            </div>
+            <div class="profile-edit-photo-copy"><strong>Tu imagen en Trama</strong><p>Una foto nueva hace tu perfil más reconocible.</p><label for="edit-avatar" class="file-picker"><span>↥</span> {{ avatarName() || 'Cambiar foto de perfil' }}</label><input id="edit-avatar" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,image/gif" (change)="chooseAvatar($event)"><small>JPG, PNG, WebP o GIF · hasta {{ maxImageMb }} MB</small></div>
+          </div>
+          <div class="profile-edit-fields">
+            <div class="edit-field"><label for="edit-nombre">Nombre</label><input #editName id="edit-nombre" formControlName="nombre" autocomplete="given-name">@if (invalid('nombre')) { <small class="field-error">Ingresá entre 2 y 60 caracteres.</small> }</div>
+            <div class="edit-field"><label for="edit-apellido">Apellido</label><input id="edit-apellido" formControlName="apellido" autocomplete="family-name">@if (invalid('apellido')) { <small class="field-error">Ingresá entre 2 y 60 caracteres.</small> }</div>
+            <div class="edit-field"><label for="edit-email">Correo electrónico</label><input id="edit-email" formControlName="email" type="email" autocomplete="email">@if (invalid('email')) { <small class="field-error">Ingresá un correo válido.</small> }</div>
+            <div class="edit-field"><label for="edit-username">Nombre de usuario</label><input id="edit-username" formControlName="username" autocomplete="username">@if (invalid('username')) { <small class="field-error">Usá 3 a 24 letras, números, puntos o guiones.</small> }</div>
+            <div class="edit-field"><label for="edit-birth">Fecha de nacimiento</label><input id="edit-birth" formControlName="fechaNacimiento" type="date" [max]="today">@if (invalid('fechaNacimiento')) { <small class="field-error">Elegí una fecha válida.</small> }</div>
+            <div class="edit-field edit-field-bio"><label for="edit-bio">Descripción breve</label><textarea id="edit-bio" formControlName="bio" rows="4"></textarea>@if (invalid('bio')) { <small class="field-error">Escribí entre 3 y 280 caracteres.</small> }</div>
+          </div>
+          @if (editError()) { <div class="form-message error" role="alert">{{ editError() }}</div> }
+          <div class="profile-edit-actions"><button type="button" class="secondary-button" [disabled]="saving()" (click)="closeEditor()">Cancelar</button><button type="submit" class="primary-button" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar cambios' }} <span>↗</span></button></div>
+        </form>
+      </div>
+    </div>
+  }

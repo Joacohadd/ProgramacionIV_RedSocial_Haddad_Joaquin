@@ -1,0 +1,55 @@
+<app-site-header/><main class="page-shell feed-page">
+    <div class="feed-grid">
+    <section class="feed-intro"><div><p class="eyebrow">EL ESPACIO DE TODOS <span class="eyebrow-star">✳</span></p><h1>En la misma <em>trama.</em></h1><p>Ideas que se cruzan. Historias que siguen. Un lugar para hacerlas circular.</p></div><div class="intro-seal" aria-hidden="true"><span>LEER<br>COMPARTIR<br>CONECTAR</span><b>↗</b></div></section>
+    <div class="feed-main">
+      <div class="feed-toolbar"><div><span class="section-index">01 / PUBLICACIONES</span><h2>Lo que está pasando<span class="orange-dot">.</span></h2></div><div class="feed-actions"><div class="sort-switch" aria-label="Orden de publicaciones"><button type="button" [class.selected]="sort() === 'date'" (click)="setSort('date')">Recientes</button><button type="button" [class.selected]="sort() === 'likes'" (click)="setSort('likes')">Más queridos</button></div></div></div>
+      <button type="button" class="composer-prompt" (click)="openComposer()"><span class="prompt-avatar">@if (auth.user(); as user) { <app-avatar [person]="user"/> }</span><span>¿Qué tenés para compartir hoy?</span><span class="prompt-plus">+</span></button>
+      @if (error()) { <div class="form-message error feed-error" role="alert">{{ error() }} <button type="button" (click)="load()">Reintentar</button></div> }
+      @if (loading()) { <div class="feed-loading"><span class="loading-orbit"></span> Buscando conversaciones…</div> }
+      @else if (posts().length === 0 && !error()) { <div class="empty-feed"><div class="empty-symbol" aria-hidden="true">✳</div><span class="section-index">UNA PÁGINA EN BLANCO</span><h3>La primera historia<br><em>puede ser tuya.</em></h3><p>Todavía no hay publicaciones aquí. Rompé el hielo y empezá la conversación.</p><button class="primary-button" type="button" (click)="openComposer()">Escribir una publicación <span>↗</span></button></div> }
+      @else { <div class="posts-list">@for (post of posts(); track post.id; let i = $index) { <app-post-card [post]="post" [index]="offset() + i + 1" [canDelete]="post.author.id === auth.user()?.id" [busy]="busyId() === post.id" (like)="toggleLike($event)" (remove)="deleteTarget.set($event)"/> }</div>
+        @if (total() > pageSize) { <div class="pagination"><span>Mostrando {{ offset() + 1 }}–{{ Math.min(offset() + pageSize, total()) }} de {{ total() }}</span><div><button type="button" [disabled]="offset() === 0 || loading()" (click)="page(-1)">← Anterior</button><strong>{{ Math.floor(offset() / pageSize) + 1 }} / {{ Math.ceil(total() / pageSize) }}</strong><button type="button" [disabled]="offset() + pageSize >= total() || loading()" (click)="page(1)">Siguiente →</button></div></div> }
+      }
+    </div><aside class="feed-sidebar"><div class="sidebar-sticky"><div class="sidebar-card sidebar-welcome"><span class="section-index">BIENVENIDO A TRAMA</span><span class="sidebar-flower" aria-hidden="true">✳</span><h3>Tu voz hace<br><em>la diferencia.</em></h3><p>Compartí una idea, una historia o algo que viste. A veces una publicación abre una conversación inesperada.</p><button type="button" (click)="openComposer()">Empezar a escribir <span>↗</span></button></div><div class="sidebar-note"><span>✷</span><div><strong>Una comunidad se teje entre todos.</strong><p>Las mejores conexiones empiezan con una palabra.</p></div></div><div class="sidebar-bottom">TRAMA · UN ESPACIO PARA COMPARTIR <span>© 2026</span></div></div></aside></div>
+  </main>
+  @if (showComposer()) {
+    <div class="modal-backdrop" (click)="closeComposer()">
+      <div class="modal-card composer-modal" role="dialog" aria-modal="true" aria-labelledby="composer-title" (click)="$event.stopPropagation()" (keydown.escape)="closeComposer()">
+        <div class="modal-top"><span class="section-index">NUEVA PUBLICACIÓN / 01</span><button type="button" class="modal-close" (click)="closeComposer()" aria-label="Cerrar">×</button></div>
+        <h2 id="composer-title">Dale forma a <em>tu idea.</em></h2><p>La conversación empieza con vos.</p>
+        <form [formGroup]="draft" (ngSubmit)="publish()" novalidate>
+          <label for="post-title">Título</label><input id="post-title" formControlName="title" placeholder="Un título que invite a leer">
+          @if (draft.controls.title.touched && draft.controls.title.invalid) { <small class="field-error">Escribí un título de 3 a 120 caracteres.</small> }
+          <label for="post-description">Tu mensaje</label><textarea id="post-description" formControlName="description" rows="6" placeholder="Contá eso que querés compartir..."></textarea>
+          @if (draft.controls.description.touched && draft.controls.description.invalid) { <small class="field-error">Escribí entre 3 y 3000 caracteres.</small> }
+          <label for="post-image">Sumá una imagen <span class="optional">(opcional)</span></label>
+          <label for="post-image" class="file-picker"><span>↥</span> {{ imageName() || 'Elegir imagen' }}</label>
+          <input #postImageInput id="post-image" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,image/gif" (change)="chooseImage($event)">
+          <small class="image-upload-hint">JPG, PNG, WebP o GIF · hasta {{ maxImageMb }} MB</small>
+          @if (imagePreviewUrl(); as preview) {
+            <div class="composer-image-preview">
+              <button #previewThumb type="button" class="composer-preview-thumb" (click)="openImageLightbox()" [attr.aria-label]="'Ver imagen completa: ' + imageName()">
+                <img [src]="preview" alt="Vista previa de la imagen seleccionada"><span>Ampliar ↗</span>
+              </button>
+              <div class="composer-preview-info"><strong>Imagen lista para publicar</strong><span>{{ imageName() }}</span><button type="button" (click)="clearSelectedImage()">Quitar imagen</button></div>
+            </div>
+          }
+          @if (composerError()) { <div class="form-message error" role="alert">{{ composerError() }}</div> }
+          <button class="primary-button modal-submit" type="submit" [disabled]="publishing()">{{ publishing() ? 'Publicando…' : 'Publicar en Trama' }} <span>↗</span></button>
+        </form>
+      </div>
+    </div>
+  }
+  @if (showImageLightbox()) {
+    @if (imagePreviewUrl(); as preview) {
+      <div class="image-lightbox" (click)="closeImageLightbox()">
+        <div class="image-lightbox-dialog" role="dialog" aria-modal="true" aria-labelledby="lightbox-caption" (click)="$event.stopPropagation()" (keydown.escape)="closeImageLightbox()">
+          <button #lightboxClose type="button" class="image-lightbox-close" (click)="closeImageLightbox()" aria-label="Cerrar imagen completa">Cerrar ×</button>
+          <img [src]="preview" [alt]="'Imagen completa: ' + imageName()">
+          <span id="lightbox-caption" class="image-lightbox-caption">{{ imageName() }}</span>
+        </div>
+      </div>
+    }
+  }
+  @if (deleteTarget(); as target) { <div class="modal-backdrop" (click)="deleteTarget.set(null)"><div class="modal-card confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" (click)="$event.stopPropagation()"><span class="section-index">CONFIRMAR ACCIÓN</span><div class="confirm-mark">✳</div><h2 id="confirm-title">¿Eliminar esta publicación?</h2><p>“{{ target.title }}” dejará de aparecer en Trama.</p><div class="confirm-actions"><button type="button" class="secondary-button" (click)="deleteTarget.set(null)">Cancelar</button><button type="button" class="primary-button" [disabled]="busyId() === target.id" (click)="confirmDelete(target)">Eliminar <span>↗</span></button></div></div></div> }
+  @if (toast()) { <div class="toast" role="status">✳ &nbsp; {{ toast() }}</div> }

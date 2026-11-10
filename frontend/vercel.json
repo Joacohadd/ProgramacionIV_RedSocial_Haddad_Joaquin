@@ -3,5 +3,6 @@
   "framework": "angular",
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist/trama/browser",
+  "git": { "deploymentEnabled": { "sprint-1": false } },
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

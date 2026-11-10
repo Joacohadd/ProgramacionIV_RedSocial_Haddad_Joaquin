@@ -4,7 +4,7 @@ Red social del TP 2 de Programación IV, con frontend Angular, backend NestJS y 
 
 > **Sobre esta rama:** el proyecto se subió inicialmente con los dos primeros sprints en un mismo commit. Esta versión del Sprint 1 fue reconstruida después, a partir del proyecto completo, para representar el alcance de la primera entrega. No es un registro histórico de una versión guardada en ese momento.
 
-La rama `sprint-2` y `main` conservan la aplicación completa hasta la segunda entrega. La web pública corresponde a `main`, no a esta maqueta.
+La rama `sprint-2` y `main` conservan la aplicación completa hasta la segunda entrega. La web pública corresponde a `main`, no a esta maqueta. El despliegue automático de `sprint-1` en los proyectos actuales de Vercel está deshabilitado: para publicar esta versión por separado hay que configurar su propio backend y sus variables de entorno.
 
 ## Alcance de esta entrega
 

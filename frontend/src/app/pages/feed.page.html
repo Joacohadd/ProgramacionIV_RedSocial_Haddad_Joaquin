@@ -1,0 +1,25 @@
+<app-site-header/>
+<main class="page-shell feed-page">
+  <div class="feed-grid">
+    <section class="feed-intro">
+      <div><p class="eyebrow">EL ESPACIO DE TODOS <span class="eyebrow-star">✳</span></p><h1>En la misma <em>trama.</em></h1><p>Ideas que se cruzan. Historias que siguen. Un lugar para hacerlas circular.</p></div>
+      <div class="intro-seal" aria-hidden="true"><span>LEER<br>COMPARTIR<br>CONECTAR</span><b>↗</b></div>
+    </section>
+    <section class="feed-main">
+      <div class="feed-toolbar"><div><span class="section-index">01 / PUBLICACIONES</span><h2>Lo que está pasando<span class="orange-dot">.</span></h2></div></div>
+      <p class="form-message" role="status"><strong>Maqueta del Sprint 1.</strong> Estas publicaciones son ejemplos; todavía no se guardan ni admiten interacciones.</p>
+      <button type="button" class="composer-prompt" disabled>Publicar estará disponible en el Sprint 2 <span class="prompt-plus">+</span></button>
+      <div class="posts-list">
+        @for (post of examples; track post.id; let i = $index) {
+          <app-post-card [post]="post" [index]="i + 1" [busy]="true"/>
+        }
+      </div>
+    </section>
+    <aside class="feed-sidebar"><div class="sidebar-sticky"><div class="sidebar-card sidebar-welcome">
+      <span class="section-index">BIENVENIDO A TRAMA</span><span class="sidebar-flower" aria-hidden="true">✳</span>
+      <h3>Tu voz hace<br><em>la diferencia.</em></h3>
+      <p>Compartí una idea, una historia o algo que viste. A veces una publicación abre una conversación inesperada.</p>
+      <a routerLink="/registro">Crear una cuenta ↗</a>
+    </div><div class="sidebar-note"><span>✷</span><div><strong>Una comunidad se teje entre todos.</strong><p>Las mejores conexiones empiezan con una palabra.</p></div></div></div></aside>
+  </div>
+</main>

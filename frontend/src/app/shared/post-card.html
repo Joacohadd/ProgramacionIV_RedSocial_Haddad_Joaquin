@@ -1,0 +1,35 @@
+<article class="post-card">
+  <div class="post-topline">
+    <span class="post-category">CONVERSACIÓN / {{ index.toString().padStart(2, '0') }}</span>
+    <span class="post-date">{{ post.createdAt | date:'dd MMM yyyy':'':'es-AR' }}</span>
+  </div>
+  <div class="post-author">
+    <app-avatar [person]="post.author"/>
+    <div>
+      <strong>{{ post.author.nombre }} {{ post.author.apellido }}</strong>
+      <span>＠{{ post.author.username }}</span>
+    </div>
+    <span class="author-spark" aria-hidden="true">✳</span>
+  </div>
+  <h3>{{ post.title }}</h3>
+  <p class="post-body">{{ post.description }}</p>
+  @if (post.imageUrl) {
+    <div class="post-image-wrap">
+      <img [src]="post.imageUrl" [alt]="'Imagen de ' + post.title">
+    </div>
+  }
+  <div class="post-footer">
+    <button type="button" class="like-button" [class.liked]="post.likedByMe"
+      [attr.aria-pressed]="post.likedByMe"
+      [attr.aria-label]="post.likedByMe ? 'Quitar Me gusta' : 'Dar Me gusta'"
+      [disabled]="busy" (click)="like.emit(post)">
+      <span class="like-heart" aria-hidden="true">{{ post.likedByMe ? '♥' : '♡' }}</span>
+      <strong class="like-count">{{ post.likesCount }}</strong>
+      <span class="like-label">Me gusta</span>
+    </button>
+    <span class="comment-soon" title="Comentarios disponibles en Sprint 3">◇ &nbsp; Comentarios · próximamente</span>
+    @if (canDelete) {
+      <button type="button" class="delete-button" [disabled]="busy" (click)="remove.emit(post)">Eliminar ↗</button>
+    }
+  </div>
+</article>

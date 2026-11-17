@@ -8,8 +8,9 @@ import { PostsService } from '../core/services/posts.service';
 import { Post } from '../core/models';
 import { MAX_IMAGE_BYTES, MAX_IMAGE_MB } from '../core/config/api-url';
 import { Avatar, PostCard, SiteHeader } from '../shared/ui';
+import { PostComments } from '../shared/post-comments';
 
-@Component({ standalone: true, imports: [DatePipe, ReactiveFormsModule, RouterLink, SiteHeader, Avatar, PostCard], templateUrl: './profile.page.html' })
+@Component({ standalone: true, imports: [DatePipe, ReactiveFormsModule, RouterLink, SiteHeader, Avatar, PostCard, PostComments], templateUrl: './profile.page.html' })
 export class ProfilePage implements OnInit, OnDestroy {
   @ViewChild('editTrigger') private editTrigger?: ElementRef<HTMLButtonElement>;
   @ViewChild('editName') private editName?: ElementRef<HTMLInputElement>;

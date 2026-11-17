@@ -11,6 +11,11 @@ export class PostsController {
 
   @Get() list(@Query() query: ListPostsDto, @Req() req: AuthenticatedRequest) { return this.posts.list(query, req.actor); }
 
+  @Get(':id')
+  detail(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.posts.detail(id, req.actor);
+  }
+
   @Post() @UseInterceptors(FileInterceptor('image', { limits: { fileSize: MAX_IMAGE_BYTES } }))
   create(@Body() dto: CreatePostDto, @UploadedFile() image: Express.Multer.File | undefined, @Req() req: AuthenticatedRequest) {
     return this.posts.create(dto, image, req.actor);

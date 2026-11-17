@@ -6,6 +6,7 @@ import * as bcrypt from 'bcryptjs';
 import { ImageService } from '../common/image.service';
 import { User, UserDocument, publicUser } from '../users/user.schema';
 import { LoginDto, RegisterDto } from './auth.dto';
+import type { SessionClaims } from './session.guard';
 
 @Injectable()
 export class AuthService {
@@ -42,5 +43,10 @@ export class AuthService {
 
   private async session(user: UserDocument) {
     return { user: publicUser(user), token: await this.jwt.signAsync({ sub: user.id, role: user.role, ver: user.tokenVersion || 0 }) };
+  }
+
+  async refresh(user: UserDocument, { sub, role, ver }: SessionClaims) {
+    const claims = { sub, role, ...(ver === undefined ? {} : { ver }) };
+    return { user: publicUser(user), token: await this.jwt.signAsync(claims) };
   }
 }

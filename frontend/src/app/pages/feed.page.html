@@ -7,11 +7,40 @@
       @if (error()) { <div class="form-message error feed-error" role="alert">{{ error() }} <button type="button" (click)="load()">Reintentar</button></div> }
       @if (loading()) { <div class="feed-loading"><span class="loading-orbit"></span> Buscando conversaciones…</div> }
       @else if (posts().length === 0 && !error()) { <div class="empty-feed"><div class="empty-symbol" aria-hidden="true">✳</div><span class="section-index">UNA PÁGINA EN BLANCO</span><h3>La primera historia<br><em>puede ser tuya.</em></h3><p>Todavía no hay publicaciones aquí. Rompé el hielo y empezá la conversación.</p><button class="primary-button" type="button" (click)="openComposer()">Escribir una publicación <span>↗</span></button></div> }
-      @else { <div class="posts-list">@for (post of posts(); track post.id; let i = $index) { <app-post-card [post]="post" [index]="offset() + i + 1" [canDelete]="post.author.id === auth.user()?.id" [busy]="busyId() === post.id" (like)="toggleLike($event)" (remove)="deleteTarget.set($event)"/> }</div>
+      @else {
+        <div class="posts-list">
+          @for (post of posts(); track post.id; let i = $index) {
+            <app-post-card [post]="post" [index]="offset() + i + 1"
+              [canDelete]="post.author.id === auth.user()?.id" [canComment]="true" [busy]="busyId() === post.id"
+              (like)="toggleLike($event)" (comment)="openComment($event)" (remove)="deleteTarget.set($event)"/>
+          }
+        </div>
         @if (total() > pageSize) { <div class="pagination"><span>Mostrando {{ offset() + 1 }}–{{ Math.min(offset() + pageSize, total()) }} de {{ total() }}</span><div><button type="button" [disabled]="offset() === 0 || loading()" (click)="page(-1)">← Anterior</button><strong>{{ Math.floor(offset() / pageSize) + 1 }} / {{ Math.ceil(total() / pageSize) }}</strong><button type="button" [disabled]="offset() + pageSize >= total() || loading()" (click)="page(1)">Siguiente →</button></div></div> }
       }
     </div><aside class="feed-sidebar"><div class="sidebar-sticky"><div class="sidebar-card sidebar-welcome"><span class="section-index">BIENVENIDO A TRAMA</span><span class="sidebar-flower" aria-hidden="true">✳</span><h3>Tu voz hace<br><em>la diferencia.</em></h3><p>Compartí una idea, una historia o algo que viste. A veces una publicación abre una conversación inesperada.</p><button type="button" (click)="openComposer()">Empezar a escribir <span>↗</span></button></div><div class="sidebar-note"><span>✷</span><div><strong>Una comunidad se teje entre todos.</strong><p>Las mejores conexiones empiezan con una palabra.</p></div></div><div class="sidebar-bottom">TRAMA · UN ESPACIO PARA COMPARTIR <span>© 2026</span></div></div></aside></div>
   </main>
+  <dialog #commentDialog class="modal-card comment-dialog" aria-labelledby="quick-comment-title"
+    aria-describedby="quick-comment-post" (cancel)="closeComment($event)">
+    <h2 id="quick-comment-title">Escribí un <em>comentario.</em></h2>
+    <p id="quick-comment-post">En «{{ commentTarget()?.title }}»</p>
+    <form class="comment-compose" [formGroup]="commentForm" (ngSubmit)="publishComment()">
+      <label for="quick-comment-message" class="visually-hidden">Tu comentario</label>
+      <textarea id="quick-comment-message" rows="4" formControlName="message" autofocus
+        [attr.maxlength]="commentMaxLength" [readonly]="commenting()"
+        [attr.aria-invalid]="commentForm.controls.message.touched && commentForm.controls.message.invalid"
+        placeholder="Sumá tu voz a la conversación"></textarea>
+      @if (commentForm.controls.message.touched && commentForm.controls.message.invalid) {
+        <p class="field-error">Escribí entre 1 y {{ commentMaxLength }} caracteres.</p>
+      }
+      @if (commentError()) { <p class="form-message error" role="alert">{{ commentError() }}</p> }
+      <div class="comment-actions">
+        <button class="secondary-button" type="button" [disabled]="commenting()" (click)="closeComment()">Cancelar</button>
+        <button class="primary-button" type="submit" [disabled]="commenting()">
+          {{ commenting() ? 'Publicando…' : 'Publicar comentario' }}
+        </button>
+      </div>
+    </form>
+  </dialog>
   @if (showComposer()) {
     <div class="modal-backdrop" (click)="closeComposer()">
       <div class="modal-card composer-modal" role="dialog" aria-modal="true" aria-labelledby="composer-title" (click)="$event.stopPropagation()" (keydown.escape)="closeComposer()">
@@ -52,4 +81,6 @@
     }
   }
   @if (deleteTarget(); as target) { <div class="modal-backdrop" (click)="deleteTarget.set(null)"><div class="modal-card confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" (click)="$event.stopPropagation()"><span class="section-index">CONFIRMAR ACCIÓN</span><div class="confirm-mark">✳</div><h2 id="confirm-title">¿Eliminar esta publicación?</h2><p>“{{ target.title }}” dejará de aparecer en Trama.</p><div class="confirm-actions"><button type="button" class="secondary-button" (click)="deleteTarget.set(null)">Cancelar</button><button type="button" class="primary-button" [disabled]="busyId() === target.id" (click)="confirmDelete(target)">Eliminar <span>↗</span></button></div></div></div> }
-  @if (toast()) { <div class="toast" role="status">✳ &nbsp; {{ toast() }}</div> }
+  <div role="status" aria-atomic="true">
+    @if (toast()) { <div class="toast"><span aria-hidden="true">✳ &nbsp;</span>{{ toast() }}</div> }
+  </div>

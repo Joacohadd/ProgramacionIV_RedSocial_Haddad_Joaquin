@@ -5,7 +5,13 @@ import { Request } from 'express';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../users/user.schema';
 
-export type AuthenticatedRequest = Request & { actor: UserDocument };
+export type SessionClaims = {
+  sub: string;
+  role: User['role'];
+  ver?: number;
+};
+
+export type AuthenticatedRequest = Request & { actor: UserDocument; sessionClaims: SessionClaims };
 
 @Injectable()
 export class SessionGuard implements CanActivate {
@@ -15,10 +21,11 @@ export class SessionGuard implements CanActivate {
     const token = req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1];
     if (!token) throw new UnauthorizedException('Iniciá sesión para continuar.');
     try {
-      const payload = await this.jwt.verifyAsync<{ sub: string; ver?: number }>(token);
+      const payload = await this.jwt.verifyAsync<SessionClaims>(token);
       const user = await this.users.findById(payload.sub) as UserDocument | null;
       if (!user || !user.active || (payload.ver ?? 0) !== (user.tokenVersion || 0)) throw new Error('Usuario no disponible');
       req.actor = user;
+      req.sessionClaims = payload;
       return true;
     } catch { throw new UnauthorizedException('La sesión no es válida o venció.'); }
   }

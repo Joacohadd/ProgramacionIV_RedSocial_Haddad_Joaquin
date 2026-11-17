@@ -1,6 +1,6 @@
 # Trama · Red social (TP 2, Programación IV)
 
-Implementación de los **Sprints 1 y 2** del enunciado. Son dos proyectos separados: Angular en [`frontend`](frontend/) y NestJS + MongoDB en [`backend`](backend/). La interfaz usa una identidad de afiches digitales: azul intenso, amarillo lima, fondos fríos, tipografía geométrica y composiciones adaptables a móvil. Su paleta y lenguaje gráfico son distintos de los del TP1.
+Implementación de los **Sprints 1, 2 y 3** del enunciado. Son dos proyectos separados: Angular en [`frontend`](frontend/) y NestJS + MongoDB en [`backend`](backend/).
 
 ## Qué está implementado
 
@@ -8,8 +8,9 @@ Implementación de los **Sprints 1 y 2** del enunciado. Son dos proyectos separa
 | --- | --- | --- |
 | 1 | Login, registro, validaciones, rutas, favicon, interfaz adaptable | Módulos `auth`, `users`, `posts`; registro con foto y contraseña hasheada; login; unicidad de correo y usuario |
 | 2 | Feed real, orden por fecha o likes, paginación, nueva publicación con imagen, like/quitar like, baja propia con modal, Mi Perfil y últimas tres publicaciones | Alta, listado paginado y filtrado, baja lógica, likes únicos; identidad y permisos validados en servidor |
+| 3 | Detalle de publicación, comentarios reales en detalle y perfil, carga por tandas, edición propia, pantalla de carga y aviso de renovación | Detalle protegido, colección de comentarios con autor y fecha, edición autorizada, validación y renovación de JWT |
 
-El feed y Mi Perfil ya usan datos reales. La zona de comentarios en Mi Perfil **es una vista preliminar identificada como tal**, porque su API y sus acciones corresponden al Sprint 3. Por pedido posterior, se agregó la edición de los datos del perfil y la foto mediante `PATCH /users/me`; el rol y la contraseña no son editables desde ese formulario. Como la consigna no asigna esa función a un sprint, conviene confirmar su ubicación con la cátedra. No se adelantaron detalle de post, comentarios, dashboard, PWA, guardados ni compartidos.
+En Mi Perfil se muestran las últimas tres publicaciones propias y hasta dos comentarios recientes por publicación. En Explorar podés comentar directamente y abrir el hilo con «Ver comentarios». Desde el hilo podés editar o eliminar tus comentarios. La edición de perfil y foto usa `PATCH /users/me`.
 
 Por pedido posterior, se agregó recuperación de contraseña: desde Login se solicita un enlace para el correo o usuario registrado, se elige una clave nueva y se vuelve a iniciar sesión. No revela si una cuenta existe. El enlace vence a los 30 minutos, solo sirve una vez y al usarlo invalida las sesiones anteriores. Esta función es adicional a los requisitos de los dos primeros sprints.
 
@@ -47,20 +48,28 @@ Abrir `http://localhost:4200`. Para un build público, definir `TRAMA_API_URL` c
 | --- | --- | --- |
 | POST | `/auth/register` | Crear usuario; `multipart/form-data` con `avatar` opcional |
 | POST | `/auth/login` | Iniciar sesión con correo o nombre de usuario |
+| POST | `/auth/authorize` | Validar el JWT Bearer y devolver los datos del usuario |
+| POST | `/auth/refresh` | Renovar un JWT vigente por 15 minutos con la misma identidad |
 | POST | `/auth/password/forgot` | Solicitar enlace de recuperación con correo o usuario |
 | POST | `/auth/password/reset` | Cambiar la contraseña con un enlace vigente |
 | PATCH | `/users/me` | Actualizar los datos del propio perfil y foto opcional; requiere JWT |
 | GET | `/posts?sort=date\|likes&offset=0&limit=5&userId=...` | Listar publicaciones activas |
 | POST | `/posts` | Crear publicación; `multipart/form-data` con `image` opcional |
+| GET | `/posts/:id` | Ver una publicación activa |
 | DELETE | `/posts/:id` | Baja lógica, autor o administrador |
 | POST | `/posts/:id/likes` | Dar un like por usuario |
 | DELETE | `/posts/:id/likes` | Quitar el like propio |
+| GET | `/posts/:id/comments?offset=0&limit=10` | Listar del más reciente al más antiguo |
+| POST | `/posts/:id/comments` | Agregar un comentario con la identidad de la sesión |
+| PUT | `/posts/:id/comments/:commentId` | Editar un comentario propio y marcarlo como editado |
+| DELETE | `/posts/:id/comments/:commentId` | Dar de baja un comentario propio y ocultarlo del hilo |
 
 Todas las rutas de publicaciones requieren JWT. `register` y `login` devuelven `{ user, token }` sin el hash de la contraseña. El registro público fija `role: usuario`; el rol nunca se toma del formulario. Respuestas: 201 al crear, 200 en lecturas/acciones correctas, 400 en validación, 401 sin sesión/credenciales inválidas, 403 en permisos, 404 para post inexistente o dado de baja y 409 en duplicados.
 
 ## Decisiones de alcance
 
-- La consigna formal incorpora JWT y renovación de sesión en Sprint 3, pero Sprint 2 exige asociar publicaciones, likes y bajas a una identidad validada. Se incorpora **emisión y verificación de JWT de 15 minutos** como base de seguridad ahora. `authorize`, `refresh`, aviso de expiración y pantalla de carga quedan para Sprint 3.
+- Al arrancar, `/cargando` verifica la sesión local con `authorize`. Cuando quedan 5 de los 15 minutos de vigencia del JWT, el aviso ofrece extenderla. El servidor solo acepta la renovación si el token sigue vigente. Al vencer la sesión o ante un 401 de la API para el token actual, Angular vuelve al login.
+- Los comentarios se guardan en `comments` y se relacionan con la publicación y el usuario por ID. El índice por publicación, fecha e ID hace estable el orden cuando dos comentarios tienen la misma fecha. Cada consulta exige que la publicación esté activa.
 - Se usa `bcryptjs` con costo 12 para contraseñas. El backend valida cada acción y consulta el usuario en MongoDB para asegurar que siga activo.
 - Los likes se guardan como IDs únicos en el documento del post. `$addToSet` junto con una condición `$ne` hace atómica la regla de un like por usuario. `likesCount` sostiene el ordenamiento. Esta estructura simple se puede migrar a colección separada si la cátedra la exige más adelante.
 - Las imágenes se guardan en disco durante el desarrollo local; en la versión publicada se usa Cloudinary, como en los ejemplos de clase11 y clase12.
@@ -79,9 +88,11 @@ cd ../frontend
 npm run build  # build de producción en dist/trama/browser
 ```
 
-Las 18 pruebas automatizadas cubren registro, duplicados, login inválido, edición propia del perfil, conservación del rol, filtrado/paginación/orden, like único, baja lógica, guard de sesión, recuperación de contraseña y subida de imágenes. También se realizó una prueba integral contra la API publicada: registro y login de una cuenta temporal, avatar y publicación con imágenes en Cloudinary, listado, like único, quitar like y baja lógica. La cuenta, la publicación y las imágenes de prueba se eliminaron después de verificar los resultados. La recuperación y la edición completa del perfil todavía requieren una prueba manual integral con una cuenta real.
+Las pruebas conservan la cobertura de los sprints previos y agregan solicitudes HTTP locales para verificar autorización, renovación, paginación de comentarios y permiso de edición. Para probar la interfaz, abrí el título de un post desde el feed, comentá, editá tu comentario y recargá el detalle con una sesión vigente.
 
 ## Publicación
+
+Publicá el frontend y el backend del Sprint 3 juntos, porque la aplicación usa las nuevas rutas de sesión y comentarios. El backend debe permitir `PUT` en CORS para guardar las ediciones entre dominios.
 
 Trama está disponible en [trama-gilt-one.vercel.app](https://trama-gilt-one.vercel.app). El frontend se aloja en Vercel y utiliza el backend publicado en Render: `https://programacioniv-redsocial-haddad-joaquin.onrender.com`. Ambos servicios están conectados a este repositorio y usan respectivamente los directorios `frontend` y `backend`. También permanece desplegada una copia de la API en Vercel (`https://trama-api.vercel.app`), pero el frontend publicado apunta a Render.
 

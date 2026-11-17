@@ -7,7 +7,14 @@
         @if (error()) { <div class="form-message error" role="alert">{{ error() }} <button type="button" (click)="load()">Reintentar</button></div> }
         @if (loading()) { <div class="feed-loading"><span class="loading-orbit"></span> Buscando tus publicaciones…</div> }
         @else if (posts().length === 0 && !error()) { <div class="profile-empty"><span>✳</span><h3>Aún no publicaste nada.</h3><p>Tu primera historia puede empezar hoy.</p><a routerLink="/publicaciones" class="primary-button">Ir a publicar ↗</a></div> }
-        @else { @for (post of posts(); track post.id; let i = $index) { <div class="profile-post-item"><app-post-card [post]="post" [index]="i + 1" [busy]="busyId() === post.id" (like)="toggleLike($event)"/><div class="comments-preview"><span>◇</span><div><strong>Comentarios · vista preliminar</strong><p>La conversación en cada publicación estará disponible en el Sprint 3.</p></div><span class="preview-tag">PRÓXIMAMENTE</span></div></div> } }
+        @else {
+          @for (post of posts(); track post.id; let i = $index) {
+            <div class="profile-post-item">
+              <app-post-card [post]="post" [index]="i + 1" [busy]="busyId() === post.id" (like)="toggleLike($event)"/>
+              <app-post-comments [postId]="post.id" [preview]="true"/>
+            </div>
+          }
+        }
       </section></div>
     }
   </main>

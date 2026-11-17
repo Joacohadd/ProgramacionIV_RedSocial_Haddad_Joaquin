@@ -17,6 +17,9 @@ export class Comment {
   @Prop({ default: false })
   modificado!: boolean;
 
+  @Prop({ type: Date, default: null })
+  deletedAt!: Date | null;
+
   createdAt!: Date;
 }
 

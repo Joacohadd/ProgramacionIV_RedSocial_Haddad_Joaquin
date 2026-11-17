@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { AuthenticatedRequest, SessionGuard } from '../auth/session.guard';
 import { CommentMessageDto, ListCommentsDto } from './comment.dto';
 import { CommentsService } from './comments.service';
@@ -22,5 +22,11 @@ export class CommentsController {
   edit(@Param('postId') postId: string, @Param('commentId') commentId: string,
        @Body() dto: CommentMessageDto, @Req() req: AuthenticatedRequest) {
     return this.comments.edit(postId, commentId, dto, req.actor);
+  }
+
+  @Delete(':commentId')
+  @HttpCode(204)
+  remove(@Param('postId') postId: string, @Param('commentId') commentId: string, @Req() req: AuthenticatedRequest) {
+    return this.comments.remove(postId, commentId, req.actor);
   }
 }

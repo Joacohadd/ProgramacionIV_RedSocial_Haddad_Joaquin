@@ -26,6 +26,8 @@ export class PostCard {
   @Input() canDelete = false;
   @Input() busy = false;
   @Input() expanded = false;
+  @Input() canComment = false;
   @Output() like = new EventEmitter<Post>();
+  @Output() comment = new EventEmitter<Post>();
   @Output() remove = new EventEmitter<Post>();
 }

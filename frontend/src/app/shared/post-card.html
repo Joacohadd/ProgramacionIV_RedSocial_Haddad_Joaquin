@@ -31,8 +31,13 @@
       <strong class="like-count">{{ post.likesCount }}</strong>
       <span class="like-label">Me gusta</span>
     </button>
+    @if (canComment) {
+      <button type="button" class="post-comment-button" aria-haspopup="dialog" (click)="comment.emit(post)">
+        <span aria-hidden="true">◇</span> Comentar
+      </button>
+    }
     @if (!expanded) {
-      <a class="post-conversation-link" [routerLink]="['/publicaciones', post.id]">◇ <span>Ver conversación</span> ↗</a>
+      <a class="post-conversation-link" [routerLink]="['/publicaciones', post.id]">◇ <span>Ver comentarios</span> ↗</a>
     }
     @if (canDelete) {
       <button type="button" class="delete-button" [disabled]="busy" (click)="remove.emit(post)">Eliminar ↗</button>

@@ -17,7 +17,7 @@ export class CommentsService {
 
   async list(postId: string, { offset, limit }: ListCommentsDto) {
     const post = await this.posts.requireActive(postId);
-    const comments = await this.comments.find({ postId: post._id })
+    const comments = await this.comments.find({ postId: post._id, deletedAt: null })
       .sort({ createdAt: -1, _id: -1 }).skip(offset).limit(limit + 1)
       .populate('authorId', authorFields).exec();
     return {
@@ -34,9 +34,7 @@ export class CommentsService {
   }
 
   async edit(postId: string, commentId: string, { message }: CommentMessageDto, actor: UserDocument) {
-    const post = await this.posts.requireActive(postId);
-    if (!Types.ObjectId.isValid(commentId)) throw new NotFoundException('Comentario no encontrado.');
-    const filter = { _id: commentId, postId: post._id };
+    const filter = await this.activeCommentFilter(postId, commentId);
     const comment = await this.comments.findOneAndUpdate(
       { ...filter, authorId: actor._id },
       { $set: { message, modificado: true } },
@@ -46,6 +44,24 @@ export class CommentsService {
     if (comment) return this.present(comment);
     if (!await this.comments.exists(filter)) throw new NotFoundException('Comentario no encontrado.');
     throw new ForbiddenException('Solo podés editar tus propios comentarios.');
+  }
+
+  async remove(postId: string, commentId: string, actor: UserDocument) {
+    const filter = await this.activeCommentFilter(postId, commentId);
+    const result = await this.comments.updateOne(
+      { ...filter, authorId: actor._id },
+      { $set: { deletedAt: new Date() } },
+    ).exec();
+
+    if (result.modifiedCount === 1) return;
+    if (!await this.comments.exists(filter)) throw new NotFoundException('Comentario no encontrado.');
+    throw new ForbiddenException('Solo podés eliminar tus propios comentarios.');
+  }
+
+  private async activeCommentFilter(postId: string, commentId: string) {
+    const post = await this.posts.requireActive(postId);
+    if (!Types.ObjectId.isValid(commentId)) throw new NotFoundException('Comentario no encontrado.');
+    return { _id: commentId, postId: post._id, deletedAt: null };
   }
 
   private present(comment: CommentDocument) {

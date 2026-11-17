@@ -31,6 +31,14 @@ const comments = Array.from({ length: 3 }, (_, index) => ({
   modificado: false,
 }));
 const commentQuery = {};
+function matchingComments(filter) {
+  if (String(filter.postId) !== postId.toString()) return [];
+  return comments.filter(item =>
+    (filter._id === undefined || item.id === filter._id) &&
+    (filter.deletedAt !== null || item.deletedAt == null) &&
+    (filter.authorId === undefined || item.authorId.id === String(filter.authorId)));
+}
+
 const commentModel = {
   find(filter) {
     commentQuery.filter = filter;
@@ -40,7 +48,7 @@ const commentModel = {
       limit(value) { commentQuery.limit = value; return this; },
       populate() { return this; },
       async exec() {
-        return [...comments].reverse().slice(commentQuery.offset, commentQuery.offset + commentQuery.limit);
+        return matchingComments(filter).reverse().slice(commentQuery.offset, commentQuery.offset + commentQuery.limit);
       },
     };
   },
@@ -54,8 +62,7 @@ const commentModel = {
     };
   },
   findOneAndUpdate(filter, update) {
-    const comment = comments.find(item => item.id === filter._id &&
-      String(filter.postId) === postId.toString() && item.authorId.id === String(filter.authorId));
+    const [comment] = matchingComments(filter);
     return {
       populate() { return this; },
       async exec() {
@@ -63,8 +70,18 @@ const commentModel = {
       },
     };
   },
+  updateOne(filter, update) {
+    return {
+      async exec() {
+        const [comment] = matchingComments(filter);
+        if (!comment) return { modifiedCount: 0 };
+        Object.assign(comment, update.$set);
+        return { modifiedCount: 1 };
+      },
+    };
+  },
   async exists(filter) {
-    return String(filter.postId) === postId.toString() && comments.some(item => item.id === filter._id);
+    return matchingComments(filter).length > 0;
   },
 };
 
@@ -178,4 +195,22 @@ test('comentarios: valida el mensaje, asigna el autor y solo el dueño puede edi
   const response = await updated.json();
   assert.equal(response.message, 'Editado');
   assert.equal(response.modificado, true);
+});
+
+test('comentarios: solo el autor puede eliminar y la baja oculta el comentario en el listado', async () => {
+  const token = jwt.sign(claims);
+  const otherToken = jwt.sign({ ...claims, sub: otherId });
+  const commentId = comments[1].id;
+  const path = `${commentRoute}/${commentId}`;
+
+  assert.equal((await request(path, { method: 'DELETE' })).status, 401);
+  assert.equal((await request(path, { method: 'DELETE', token: otherToken })).status, 403);
+  const beforeDeletion = await request(commentRoute, { token });
+  assert.ok((await beforeDeletion.json()).items.some(item => item.id === commentId));
+
+  assert.equal((await request(path, { method: 'DELETE', token })).status, 204);
+  const afterDeletion = await request(commentRoute, { token });
+  assert.ok(!(await afterDeletion.json()).items.some(item => item.id === commentId));
+  assert.equal((await request(path, { method: 'DELETE', token })).status, 404);
+  assert.equal((await request(path, { method: 'PUT', token, body: { message: 'Cambio posterior' } })).status, 404);
 });

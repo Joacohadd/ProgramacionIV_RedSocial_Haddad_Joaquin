@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, DestroyRef, OnInit, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, inject, input, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -20,6 +20,8 @@ export class PostComments implements OnInit {
   readonly preview = input(false);
   private readonly posts = inject(PostsService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly deleteDialog = viewChild<ElementRef<HTMLDialogElement>>('deleteDialog');
+  private readonly newComment = viewChild<ElementRef<HTMLTextAreaElement>>('newComment');
   readonly auth = inject(AuthService);
 
   readonly comments = signal<PostComment[]>([]);
@@ -31,17 +33,25 @@ export class PostComments implements OnInit {
   readonly editingId = signal<string | null>(null);
   readonly savingEdit = signal(false);
   readonly editError = signal('');
+  readonly deleteTarget = signal<PostComment | null>(null);
+  readonly deleting = signal(false);
+  readonly deleteError = signal('');
+  readonly notice = signal('');
   readonly maxLength = 1000;
   readonly message = this.messageControl();
   readonly editedMessage = this.messageControl();
   readonly composeForm = new FormGroup({ message: this.message });
   readonly editForm = new FormGroup({ message: this.editedMessage });
   private offset = 0;
+  private noticeTimer?: ReturnType<typeof setTimeout>;
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    this.destroyRef.onDestroy(() => clearTimeout(this.noticeTimer));
+    this.load();
+  }
 
   load() {
-    if (this.loading() || this.posting()) return;
+    if (this.loading() || this.posting() || this.deleting()) return;
     this.loading.set(true);
     this.loadError.set('');
     this.posts.comments(this.postId(), this.offset, this.preview() ? 2 : 10)
@@ -113,6 +123,45 @@ export class PostComments implements OnInit {
           this.savingEdit.set(false);
         },
       });
+  }
+
+  askToDelete(comment: PostComment) {
+    const dialog = this.deleteDialog()?.nativeElement;
+    if (!dialog || dialog.open || this.loading() || this.posting() || this.savingEdit()) return;
+    this.deleteError.set('');
+    clearTimeout(this.noticeTimer);
+    this.notice.set('');
+    this.deleteTarget.set(comment);
+    dialog.showModal();
+  }
+
+  cancelDelete(event?: Event) {
+    event?.preventDefault();
+    if (this.deleting()) return;
+    this.deleteDialog()?.nativeElement.close();
+    this.deleteTarget.set(null);
+  }
+
+  confirmDelete() {
+    const comment = this.deleteTarget();
+    if (!comment || this.deleting()) return;
+    this.deleteError.set('');
+    this.deleting.set(true);
+    this.posts.deleteComment(this.postId(), comment.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.comments.update(items => items.filter(item => item.id !== comment.id));
+        this.offset = Math.max(0, this.offset - 1);
+        this.deleting.set(false);
+        this.cancelDelete();
+        this.newComment()?.nativeElement.focus({ preventScroll: true });
+        this.notice.set('Comentario eliminado.');
+        this.noticeTimer = setTimeout(() => this.notice.set(''), 4000);
+      },
+      error: error => {
+        this.deleting.set(false);
+        this.deleteError.set(errorMessage(error));
+      },
+    });
   }
 
   private messageControl() {

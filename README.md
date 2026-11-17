@@ -10,7 +10,7 @@ Implementación de los **Sprints 1, 2 y 3** del enunciado. Son dos proyectos sep
 | 2 | Feed real, orden por fecha o likes, paginación, nueva publicación con imagen, like/quitar like, baja propia con modal, Mi Perfil y últimas tres publicaciones | Alta, listado paginado y filtrado, baja lógica, likes únicos; identidad y permisos validados en servidor |
 | 3 | Detalle de publicación, comentarios reales en detalle y perfil, carga por tandas, edición propia, pantalla de carga y aviso de renovación | Detalle protegido, colección de comentarios con autor y fecha, edición autorizada, validación y renovación de JWT |
 
-En Mi Perfil se muestran las últimas tres publicaciones propias y hasta dos comentarios recientes por publicación. El hilo completo se abre desde «Ver conversación». La edición de perfil y foto usa `PATCH /users/me`.
+En Mi Perfil se muestran las últimas tres publicaciones propias y hasta dos comentarios recientes por publicación. En Explorar podés comentar directamente y abrir el hilo con «Ver comentarios». Desde el hilo podés editar o eliminar tus comentarios. La edición de perfil y foto usa `PATCH /users/me`.
 
 Por pedido posterior, se agregó recuperación de contraseña: desde Login se solicita un enlace para el correo o usuario registrado, se elige una clave nueva y se vuelve a iniciar sesión. No revela si una cuenta existe. El enlace vence a los 30 minutos, solo sirve una vez y al usarlo invalida las sesiones anteriores. Esta función es adicional a los requisitos de los dos primeros sprints.
 
@@ -62,6 +62,7 @@ Abrir `http://localhost:4200`. Para un build público, definir `TRAMA_API_URL` c
 | GET | `/posts/:id/comments?offset=0&limit=10` | Listar del más reciente al más antiguo |
 | POST | `/posts/:id/comments` | Agregar un comentario con la identidad de la sesión |
 | PUT | `/posts/:id/comments/:commentId` | Editar un comentario propio y marcarlo como editado |
+| DELETE | `/posts/:id/comments/:commentId` | Dar de baja un comentario propio y ocultarlo del hilo |
 
 Todas las rutas de publicaciones requieren JWT. `register` y `login` devuelven `{ user, token }` sin el hash de la contraseña. El registro público fija `role: usuario`; el rol nunca se toma del formulario. Respuestas: 201 al crear, 200 en lecturas/acciones correctas, 400 en validación, 401 sin sesión/credenciales inválidas, 403 en permisos, 404 para post inexistente o dado de baja y 409 en duplicados.
 

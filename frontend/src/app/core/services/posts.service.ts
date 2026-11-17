@@ -21,6 +21,9 @@ export class PostsService {
   editComment(id: string, commentId: string, message: string) {
     return this.http.put<PostComment>(`${API_URL}/posts/${id}/comments/${commentId}`, { message });
   }
+  deleteComment(id: string, commentId: string) {
+    return this.http.delete<void>(`${API_URL}/posts/${id}/comments/${commentId}`);
+  }
   like(id: string) { return this.http.post<Post>(`${API_URL}/posts/${id}/likes`, {}); }
   unlike(id: string) { return this.http.delete<Post>(`${API_URL}/posts/${id}/likes`); }
   remove(id: string) { return this.http.delete<{ deleted: boolean }>(`${API_URL}/posts/${id}`); }

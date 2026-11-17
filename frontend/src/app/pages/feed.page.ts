@@ -1,4 +1,5 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../core/services/auth.service';
 import { errorMessage } from '../core/services/http-error';
@@ -12,6 +13,8 @@ export class FeedPage implements OnInit, OnDestroy {
   @ViewChild('postImageInput') private postImageInput?: ElementRef<HTMLInputElement>;
   @ViewChild('previewThumb') private previewThumb?: ElementRef<HTMLButtonElement>;
   @ViewChild('lightboxClose') private lightboxClose?: ElementRef<HTMLButtonElement>;
+  @ViewChild('commentDialog', { static: true }) private commentDialog!: ElementRef<HTMLDialogElement>;
+  private readonly destroyRef = inject(DestroyRef);
   readonly Math = Math;
   readonly maxImageMb = MAX_IMAGE_MB;
   readonly auth = inject(AuthService); private readonly postsApi = inject(PostsService); private readonly fb = inject(FormBuilder).nonNullable;
@@ -20,11 +23,22 @@ export class FeedPage implements OnInit, OnDestroy {
   readonly showComposer = signal(false); readonly publishing = signal(false); readonly composerError = signal(''); readonly imageName = signal('');
   readonly imagePreviewUrl = signal<string | null>(null); readonly showImageLightbox = signal(false);
   readonly deleteTarget = signal<Post | null>(null); readonly toast = signal(''); private image: File | null = null;
+  readonly commentTarget = signal<Post | null>(null);
+  readonly commenting = signal(false);
+  readonly commentError = signal('');
+  readonly commentMaxLength = 1000;
+  readonly commentForm = this.fb.group({
+    message: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(this.commentMaxLength)]],
+  });
+  private toastTimer?: ReturnType<typeof setTimeout>;
   private loadVersion = 0;
   readonly draft = this.fb.group({ title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120), Validators.pattern(/\S/)]],
     description: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(3000), Validators.pattern(/\S/)]] });
   ngOnInit() { this.load(); }
-  ngOnDestroy() { this.clearSelectedImage(); }
+  ngOnDestroy() {
+    this.clearSelectedImage();
+    clearTimeout(this.toastTimer);
+  }
   load() { const version = ++this.loadVersion; this.loading.set(true); this.error.set(''); this.postsApi.list({ sort: this.sort(), offset: this.offset(), limit: this.pageSize }).subscribe({
     next: page => { if (version !== this.loadVersion) return; this.posts.set(page.items); this.total.set(page.total); this.loading.set(false); },
     error: error => { if (version !== this.loadVersion) return; this.error.set(errorMessage(error)); this.loading.set(false); },
@@ -71,5 +85,47 @@ export class FeedPage implements OnInit, OnDestroy {
       error: error => { this.error.set(errorMessage(error)); this.busyId.set(''); } }); }
   confirmDelete(post: Post) { this.busyId.set(post.id); this.postsApi.remove(post.id).subscribe({ next: () => { this.busyId.set(''); this.deleteTarget.set(null); if (this.offset() > 0 && this.posts().length === 1) this.offset.update(value => Math.max(0, value - this.pageSize)); this.load(); this.flash('Publicación eliminada.'); },
     error: error => { this.busyId.set(''); this.deleteTarget.set(null); this.error.set(errorMessage(error)); } }); }
-  private flash(message: string) { this.toast.set(message); window.setTimeout(() => this.toast.set(''), 4000); }
+
+  openComment(post: Post) {
+    if (this.commentDialog.nativeElement.open) return;
+    this.commentForm.reset();
+    this.commentError.set('');
+    this.commentTarget.set(post);
+    this.commentDialog.nativeElement.showModal();
+  }
+
+  closeComment(event?: Event) {
+    event?.preventDefault();
+    if (this.commenting()) return;
+    this.commentDialog.nativeElement.close();
+    this.commentTarget.set(null);
+  }
+
+  publishComment() {
+    const post = this.commentTarget();
+    this.commentForm.markAllAsTouched();
+    if (!post || this.commentForm.invalid || this.commenting()) return;
+
+    this.commenting.set(true);
+    this.commentError.set('');
+    this.postsApi.comment(post.id, this.commentForm.controls.message.value.trim())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.commenting.set(false);
+          this.closeComment();
+          this.flash('Comentario publicado.');
+        },
+        error: error => {
+          this.commenting.set(false);
+          this.commentError.set(errorMessage(error));
+        },
+      });
+  }
+
+  private flash(message: string) {
+    clearTimeout(this.toastTimer);
+    this.toast.set(message);
+    this.toastTimer = setTimeout(() => this.toast.set(''), 4000);
+  }
 }

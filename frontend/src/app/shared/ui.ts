@@ -19,12 +19,13 @@ export class SiteHeader {
   logout() { this.auth.clear(); void this.router.navigateByUrl('/login'); }
 }
 
-@Component({ selector: 'app-post-card', standalone: true, imports: [Avatar, DatePipe], templateUrl: './post-card.html' })
+@Component({ selector: 'app-post-card', standalone: true, imports: [Avatar, DatePipe, RouterLink], templateUrl: './post-card.html' })
 export class PostCard {
   @Input({ required: true }) post!: Post;
   @Input() index = 1;
   @Input() canDelete = false;
   @Input() busy = false;
+  @Input() expanded = false;
   @Output() like = new EventEmitter<Post>();
   @Output() remove = new EventEmitter<Post>();
 }

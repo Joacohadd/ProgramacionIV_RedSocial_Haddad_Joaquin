@@ -1,0 +1,77 @@
+<section class="conversation" [class.conversation-preview]="preview()" [attr.aria-labelledby]="'conversation-' + postId()">
+  <header class="conversation-header">
+    @if (preview()) {
+      <h3 [id]="'conversation-' + postId()">Comentarios recientes</h3>
+      <a [routerLink]="['/publicaciones', postId()]">Abrir conversación ↗</a>
+    } @else {
+      <span class="conversation-mark" aria-hidden="true">◇</span>
+      <h2 [id]="'conversation-' + postId()">Comentarios</h2>
+    }
+  </header>
+
+  @if (!preview()) {
+    <form class="comment-compose" [formGroup]="composeForm" (ngSubmit)="add()">
+      <label for="new-comment">Escribí un comentario</label>
+      <textarea id="new-comment" rows="3" formControlName="message" [attr.maxlength]="maxLength"
+        [readonly]="posting()" [attr.aria-invalid]="message.touched && message.invalid"
+        placeholder="Sumá tu voz a la conversación"></textarea>
+      @if (message.touched && message.invalid) { <p class="field-error">Escribí entre 1 y 1000 caracteres.</p> }
+      @if (postError()) { <p class="form-message error" role="alert">{{ postError() }}</p> }
+      <div class="comment-actions">
+        <span class="comment-length">{{ message.value.length }} / {{ maxLength }}</span>
+        <button class="primary-button" type="submit" [disabled]="posting() || loading() || !!loadError()">
+          {{ posting() ? 'Publicando…' : 'Publicar comentario' }}
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (comments().length) {
+    <ol class="comment-list">
+      @for (comment of comments(); track comment.id) {
+        <li class="comment-entry">
+          @if (comment.author; as author) { <app-avatar [person]="author"/> }
+          <div class="comment-content">
+            <div class="comment-meta">
+              <strong>{{ comment.author ? comment.author.nombre + ' ' + comment.author.apellido : 'Cuenta no disponible' }}</strong>
+              <time [attr.datetime]="comment.createdAt">{{ comment.createdAt | date:'d MMM, HH:mm':'':'es-AR' }}</time>
+              @if (comment.modificado) { <span class="comment-edited">Editado</span> }
+              @if (!preview() && editingId() !== comment.id && comment.author && comment.author.id === auth.user()?.id) {
+                <button class="comment-edit-link" type="button" [disabled]="savingEdit()" (click)="startEdit(comment)">Editar</button>
+              }
+            </div>
+            @if (editingId() === comment.id) {
+              <form class="comment-editor" [formGroup]="editForm" (ngSubmit)="saveEdit(comment)">
+                <label [for]="'edit-' + comment.id">Editar comentario</label>
+                <textarea [id]="'edit-' + comment.id" rows="3" formControlName="message"
+                  [attr.maxlength]="maxLength" [readonly]="savingEdit()"
+                  [attr.aria-invalid]="editedMessage.touched && editedMessage.invalid"></textarea>
+                @if (editedMessage.touched && editedMessage.invalid) { <p class="field-error">Escribí entre 1 y 1000 caracteres.</p> }
+                @if (editError()) { <p class="form-message error" role="alert">{{ editError() }}</p> }
+                <div class="comment-actions">
+                  <button class="secondary-button" type="button" (click)="cancelEdit()" [disabled]="savingEdit()">Cancelar</button>
+                  <button class="primary-button" type="submit" [disabled]="savingEdit()">
+                    {{ savingEdit() ? 'Guardando…' : 'Guardar cambios' }}
+                  </button>
+                </div>
+              </form>
+            } @else {
+              <p class="comment-message">{{ comment.message }}</p>
+            }
+          </div>
+        </li>
+      }
+    </ol>
+  } @else if (!loading() && !loadError()) {
+    <p class="comment-empty">Todavía no hay comentarios.</p>
+  }
+
+  @if (loading()) {
+    <p class="comment-status" role="status"><span class="loading-orbit" aria-hidden="true"></span> Cargando comentarios…</p>
+  } @else if (loadError()) {
+    <p class="form-message error" role="alert">{{ loadError() }}</p>
+    <button class="secondary-button" type="button" (click)="load()">Reintentar</button>
+  } @else if (!preview() && hasMore()) {
+    <button class="secondary-button comment-more" type="button" [disabled]="posting()" (click)="load()">Cargar más comentarios</button>
+  }
+</section>

@@ -1,0 +1,22 @@
+<app-site-header/>
+<main class="page-shell post-detail">
+  <nav class="detail-nav" aria-label="Ubicación">
+    <a routerLink="/publicaciones">← Volver al feed</a>
+  </nav>
+
+  @if (item(); as post) {
+    <app-post-card [post]="post" [expanded]="true" [busy]="liking()" (like)="toggleLike($event)"/>
+    @if (likeError()) { <p class="form-message error" role="alert">{{ likeError() }}</p> }
+    @for (activePost of [post]; track activePost.id) {
+      <app-post-comments [postId]="activePost.id"/>
+    }
+  } @else if (error()) {
+    <section class="empty-feed">
+      <h1>{{ notFound() ? 'Publicación no encontrada' : 'No pudimos abrir la publicación' }}</h1>
+      <p role="alert">{{ error() }}</p>
+      @if (!notFound()) { <button type="button" class="secondary-button" (click)="reload()">Reintentar</button> }
+    </section>
+  } @else {
+    <div class="feed-loading" role="status"><span class="loading-orbit" aria-hidden="true"></span> Abriendo publicación…</div>
+  }
+</main>

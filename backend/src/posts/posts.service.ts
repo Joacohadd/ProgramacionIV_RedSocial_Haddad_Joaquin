@@ -29,8 +29,14 @@ export class PostsService {
     return this.present(post, actor);
   }
 
+  async detail(id: string, actor: UserDocument) {
+    const post = await this.requireActive(id);
+    await post.populate('authorId', 'nombre apellido username avatarUrl');
+    return this.present(post, actor);
+  }
+
   async remove(id: string, actor: UserDocument) {
-    const post = await this.existing(id);
+    const post = await this.requireActive(id);
     if (String(post.authorId) !== actor.id && actor.role !== 'administrador') throw new ForbiddenException('Solo podés eliminar tus publicaciones.');
     post.deletedAt = new Date();
     await post.save();
@@ -42,7 +48,7 @@ export class PostsService {
       { _id: this.objectId(id), deletedAt: null, likes: { $ne: actor._id } },
       { $addToSet: { likes: actor._id }, $inc: { likesCount: 1 } }, { new: true },
     ).populate('authorId', 'nombre apellido username avatarUrl').exec();
-    if (!post) { await this.existing(id); throw new ConflictException('Ya diste Me gusta a esta publicación.'); }
+    if (!post) { await this.requireActive(id); throw new ConflictException('Ya diste Me gusta a esta publicación.'); }
     return this.present(post, actor);
   }
 
@@ -51,7 +57,7 @@ export class PostsService {
       { _id: this.objectId(id), deletedAt: null, likes: actor._id },
       { $pull: { likes: actor._id }, $inc: { likesCount: -1 } }, { new: true },
     ).populate('authorId', 'nombre apellido username avatarUrl').exec();
-    if (!post) { await this.existing(id); throw new ConflictException('Todavía no diste Me gusta a esta publicación.'); }
+    if (!post) { await this.requireActive(id); throw new ConflictException('Todavía no diste Me gusta a esta publicación.'); }
     return this.present(post, actor);
   }
 
@@ -60,7 +66,7 @@ export class PostsService {
     return new Types.ObjectId(id);
   }
 
-  private async existing(id: string) {
+  async requireActive(id: string) {
     const post = await this.posts.findOne({ _id: this.objectId(id), deletedAt: null });
     if (!post) throw new NotFoundException('Publicación no encontrada.');
     return post;

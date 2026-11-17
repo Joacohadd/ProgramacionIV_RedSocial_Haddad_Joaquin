@@ -1,0 +1,15 @@
+<dialog #dialog class="session-dialog" aria-labelledby="session-reminder-title" (cancel)="dismiss($event)">
+  <div class="session-ticket">
+    <p class="section-index">SESIÓN</p>
+    <h2 id="session-reminder-title">¿Seguimos <em>en Trama?</em></h2>
+    <p>{{ minutes() === 1 ? 'Queda 1 minuto' : 'Quedan ' + minutes() + ' minutos' }} de sesión.
+      Podés extenderla por otros 15 minutos.</p>
+    @if (error()) { <p class="form-message error" role="alert">{{ error() }}</p> }
+    <div class="session-ticket-actions">
+      <button type="button" class="secondary-button" [disabled]="renewing()" (click)="dismiss()">Ahora no</button>
+      <button type="button" class="primary-button" [disabled]="renewing()" (click)="extend()" autofocus>
+        {{ renewing() ? 'Extendiendo…' : 'Extender sesión' }}
+      </button>
+    </div>
+  </div>
+</dialog>

@@ -1,6 +1,6 @@
-<article class="post-card">
+<article class="post-card" [class.post-card-expanded]="expanded">
   <div class="post-topline">
-    <span class="post-category">CONVERSACIÓN / {{ index.toString().padStart(2, '0') }}</span>
+    <span class="post-category">{{ expanded ? 'PUBLICACIÓN' : 'CONVERSACIÓN / ' + index.toString().padStart(2, '0') }}</span>
     <span class="post-date">{{ post.createdAt | date:'dd MMM yyyy':'':'es-AR' }}</span>
   </div>
   <div class="post-author">
@@ -11,7 +11,11 @@
     </div>
     <span class="author-spark" aria-hidden="true">✳</span>
   </div>
-  <h3>{{ post.title }}</h3>
+  @if (expanded) {
+    <h1>{{ post.title }}</h1>
+  } @else {
+    <h3><a [routerLink]="['/publicaciones', post.id]">{{ post.title }}</a></h3>
+  }
   <p class="post-body">{{ post.description }}</p>
   @if (post.imageUrl) {
     <div class="post-image-wrap">
@@ -27,7 +31,9 @@
       <strong class="like-count">{{ post.likesCount }}</strong>
       <span class="like-label">Me gusta</span>
     </button>
-    <span class="comment-soon" title="Comentarios disponibles en Sprint 3">◇ &nbsp; Comentarios · próximamente</span>
+    @if (!expanded) {
+      <a class="post-conversation-link" [routerLink]="['/publicaciones', post.id]">◇ <span>Ver conversación</span> ↗</a>
+    }
     @if (canDelete) {
       <button type="button" class="delete-button" [disabled]="busy" (click)="remove.emit(post)">Eliminar ↗</button>
     }

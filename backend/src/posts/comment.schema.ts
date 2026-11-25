@@ -26,3 +26,4 @@ export class Comment {
 export type CommentDocument = HydratedDocument<Comment>;
 export const CommentSchema = SchemaFactory.createForClass(Comment);
 CommentSchema.index({ postId: 1, createdAt: -1, _id: -1 });
+CommentSchema.index({ deletedAt: 1, createdAt: -1 });

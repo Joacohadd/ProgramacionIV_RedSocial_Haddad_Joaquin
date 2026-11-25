@@ -2,18 +2,19 @@ import { DatePipe } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../core/services/auth.service';
-import { Author, Post, User } from '../core/models';
+import { Author, Post } from '../core/models';
+import { AdminOnlyDirective } from './trama-directives';
 
 @Component({ selector: 'app-mark', standalone: true, templateUrl: './mark.html' })
 export class Mark {}
 
 @Component({ selector: 'app-avatar', standalone: true, templateUrl: './avatar.html' })
-export class Avatar { @Input({ required: true }) person!: User | Author; @Input() large = false; }
+export class Avatar { @Input({ required: true }) person!: Pick<Author, 'avatarUrl' | 'nombre' | 'apellido'>; @Input() large = false; }
 
 @Component({ selector: 'app-auth-visual', standalone: true, imports: [Mark, RouterLink], templateUrl: './auth-visual.html' })
 export class AuthVisual {}
 
-@Component({ selector: 'app-site-header', standalone: true, imports: [RouterLink, RouterLinkActive, Mark, Avatar], templateUrl: './site-header.html' })
+@Component({ selector: 'app-site-header', standalone: true, imports: [RouterLink, RouterLinkActive, Mark, Avatar, AdminOnlyDirective], templateUrl: './site-header.html' })
 export class SiteHeader {
   readonly auth = inject(AuthService); private readonly router = inject(Router);
   logout() { this.auth.clear(); void this.router.navigateByUrl('/login'); }

@@ -11,5 +11,5 @@ export class CommentMessageDto {
 
 export class ListCommentsDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) offset = 0;
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(30) limit = 10;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(30) limit = 5;
 }

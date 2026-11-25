@@ -23,7 +23,8 @@ test('registro: guarda rol usuario y no expone el hash', async () => {
     saved = value;
     return { id: actor.id, ...value, active: true };
   } };
-  const service = new AuthService(users, { signAsync: async () => 'signed-token' }, { save: async () => undefined });
+  const accounts = new UsersService(users, { save: async () => undefined });
+  const service = new AuthService(users, { signAsync: async () => 'signed-token' }, accounts);
   const response = await service.register({ nombre: 'Ada', apellido: 'Luna', email: 'ADA@example.com', username: 'Ada',
     password: 'Clave1234', repetirPassword: 'Clave1234', fechaNacimiento: '2001-05-01', bio: 'Me gusta escribir.' });
   assert.equal(saved.role, 'usuario');
@@ -34,7 +35,8 @@ test('registro: guarda rol usuario y no expone el hash', async () => {
 });
 
 test('registro duplicado: responde conflicto', async () => {
-  const service = new AuthService({ exists: async () => ({ _id: actor.id }) }, {}, { save: async () => undefined });
+  const users = { exists: async () => ({ _id: actor.id }) };
+  const service = new AuthService(users, {}, new UsersService(users, { save: async () => undefined }));
   await assert.rejects(() => service.register({ email: 'ada@example.com', username: 'ada', password: 'Clave1234', repetirPassword: 'Clave1234' }), ConflictException);
 });
 

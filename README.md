@@ -1,6 +1,6 @@
 # Trama · Red social (TP 2, Programación IV)
 
-Implementación de los **Sprints 1, 2 y 3** del enunciado. Son dos proyectos separados: Angular en [`frontend`](frontend/) y NestJS + MongoDB en [`backend`](backend/).
+Implementación de los **Sprints 1 a 4** del enunciado. Angular está en [`frontend`](frontend/) y NestJS + MongoDB en [`backend`](backend/).
 
 ## Qué está implementado
 
@@ -8,9 +8,10 @@ Implementación de los **Sprints 1, 2 y 3** del enunciado. Son dos proyectos sep
 | --- | --- | --- |
 | 1 | Login, registro, validaciones, rutas, favicon, interfaz adaptable | Módulos `auth`, `users`, `posts`; registro con foto y contraseña hasheada; login; unicidad de correo y usuario |
 | 2 | Feed real, orden por fecha o likes, paginación, nueva publicación con imagen, like/quitar like, baja propia con modal, Mi Perfil y últimas tres publicaciones | Alta, listado paginado y filtrado, baja lógica, likes únicos; identidad y permisos validados en servidor |
-| 3 | Detalle de publicación, comentarios reales en detalle y perfil, carga por tandas, edición propia, pantalla de carga y aviso de renovación | Detalle protegido, colección de comentarios con autor y fecha, edición autorizada, validación y renovación de JWT |
+| 3 | Detalle de publicación, comentarios, edición propia, pantalla de carga y aviso de renovación | Detalle protegido, colección de comentarios con autor y fecha, edición autorizada, validación y renovación de JWT |
+| 4 | Administración de cuentas, moderación, tres gráficos con rango de fechas, PWA, tres pipes y tres directivas propias | Alta administrativa, baja y rehabilitación de usuarios, estadísticas agregadas y guard de rol |
 
-En Mi Perfil se muestran las últimas tres publicaciones propias y hasta dos comentarios recientes por publicación. En Explorar podés comentar directamente y abrir el hilo con «Ver comentarios». Desde el hilo podés editar o eliminar tus comentarios. La edición de perfil y foto usa `PATCH /users/me`.
+En Mi Perfil se muestran las últimas tres publicaciones propias. En Explorar podés comentar directamente y abrir el hilo con «Ver comentarios». En el detalle se cargan cinco mensajes iniciales y otros cinco con «Cargar más comentarios». Desde el hilo podés editar o eliminar tus comentarios. La edición de perfil y foto usa `PATCH /users/me`.
 
 Por pedido posterior, se agregó recuperación de contraseña: desde Login se solicita un enlace para el correo o usuario registrado, se elige una clave nueva y se vuelve a iniciar sesión. No revela si una cuenta existe. El enlace vence a los 30 minutos, solo sirve una vez y al usarlo invalida las sesiones anteriores. Esta función es adicional a los requisitos de los dos primeros sprints.
 
@@ -53,18 +54,27 @@ Abrir `http://localhost:4200`. Para un build público, definir `TRAMA_API_URL` c
 | POST | `/auth/password/forgot` | Solicitar enlace de recuperación con correo o usuario |
 | POST | `/auth/password/reset` | Cambiar la contraseña con un enlace vigente |
 | PATCH | `/users/me` | Actualizar los datos del propio perfil y foto opcional; requiere JWT |
+| GET | `/users` | Listar cuentas como administrador |
+| POST | `/users` | Crear una cuenta con rol y foto opcional como administrador |
+| DELETE | `/users/:id` | Deshabilitar una cuenta e invalidar sus sesiones |
+| POST | `/users/:id/enable` | Rehabilitar una cuenta |
 | GET | `/posts?sort=date\|likes&offset=0&limit=5&userId=...` | Listar publicaciones activas |
 | POST | `/posts` | Crear publicación; `multipart/form-data` con `image` opcional |
 | GET | `/posts/:id` | Ver una publicación activa |
 | DELETE | `/posts/:id` | Baja lógica, autor o administrador |
 | POST | `/posts/:id/likes` | Dar un like por usuario |
 | DELETE | `/posts/:id/likes` | Quitar el like propio |
-| GET | `/posts/:id/comments?offset=0&limit=10` | Listar del más reciente al más antiguo |
+| GET | `/posts/:id/comments?offset=0&limit=5` | Listar del más reciente al más antiguo |
 | POST | `/posts/:id/comments` | Agregar un comentario con la identidad de la sesión |
 | PUT | `/posts/:id/comments/:commentId` | Editar un comentario propio y marcarlo como editado |
 | DELETE | `/posts/:id/comments/:commentId` | Dar de baja un comentario propio y ocultarlo del hilo |
+| GET | `/stats/posts-by-user` | Contar publicaciones activas por autor |
+| GET | `/stats/comments-over-time` | Contar comentarios activos por día |
+| GET | `/stats/comments-by-post` | Contar comentarios activos por publicación |
 
 Todas las rutas de publicaciones requieren JWT. `register` y `login` devuelven `{ user, token }` sin el hash de la contraseña. El registro público fija `role: usuario`; el rol nunca se toma del formulario. Respuestas: 201 al crear, 200 en lecturas/acciones correctas, 400 en validación, 401 sin sesión/credenciales inválidas, 403 en permisos, 404 para post inexistente o dado de baja y 409 en duplicados.
+
+Las rutas administrativas requieren JWT y comprueban el rol contra el usuario activo en MongoDB. Las tres estadísticas reciben `from` y `to` como fechas `AAAA-MM-DD`, ambas inclusive en UTC. Las publicaciones o comentarios dados de baja quedan fuera de las series.
 
 ## Decisiones de alcance
 
@@ -88,11 +98,11 @@ cd ../frontend
 npm run build  # build de producción en dist/trama/browser
 ```
 
-Las pruebas conservan la cobertura de los sprints previos y agregan solicitudes HTTP locales para verificar autorización, renovación, paginación de comentarios y permiso de edición. Para probar la interfaz, abrí el título de un post desde el feed, comentá, editá tu comentario y recargá el detalle con una sesión vigente.
+Las pruebas ejecutan solicitudes HTTP locales para verificar autorización, renovación, permisos de administración y operaciones de comentarios. Iniciá sesión como administrador y entrá a «Administración» para probar los paneles de usuarios y estadísticas. La PWA está habilitada en el build de producción. Al servirlo en localhost o HTTPS, el navegador puede instalar Trama. El service worker guarda los archivos de la aplicación y las consultas a la API se hacen por red.
 
 ## Publicación
 
-Publicá el frontend y el backend del Sprint 3 juntos, porque la aplicación usa las nuevas rutas de sesión y comentarios. El backend debe permitir `PUT` en CORS para guardar las ediciones entre dominios.
+Publicá el frontend y el backend del Sprint 4 juntos para habilitar las funciones de administración en la versión publicada. El backend debe permitir `PUT` en CORS para guardar las ediciones de comentarios entre dominios.
 
 Trama está disponible en [trama-gilt-one.vercel.app](https://trama-gilt-one.vercel.app). El frontend se aloja en Vercel y utiliza el backend publicado en Render: `https://programacioniv-redsocial-haddad-joaquin.onrender.com`. Ambos servicios están conectados a este repositorio y usan respectivamente los directorios `frontend` y `backend`. También permanece desplegada una copia de la API en Vercel (`https://trama-api.vercel.app`), pero el frontend publicado apunta a Render.
 

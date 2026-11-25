@@ -1,0 +1,82 @@
+<app-site-header/>
+<main class="page-shell dashboard">
+  <app-dashboard-header title="Usuarios"/>
+  <section class="dashboard-panel" aria-labelledby="accounts-title">
+    <div class="dashboard-toolbar">
+      <div>
+        <h2 id="accounts-title">Cuentas de Trama</h2>
+        @if (!loading() && !loadError()) {
+          <p>{{ users().length }} en total · {{ activeCount() }} habilitadas</p>
+        }
+      </div>
+      <button class="primary-button" type="button" (click)="openForm()"><span aria-hidden="true">+</span> Nueva cuenta</button>
+    </div>
+    <div class="dashboard-search">
+      <label for="user-search">Buscar una cuenta</label>
+      <input id="user-search" type="search" placeholder="Nombre, usuario o correo" [value]="query()" (input)="search($event)">
+    </div>
+    @if (notice()) { <p class="dashboard-notice" role="status">{{ notice() }}</p> }
+    @if (loading()) {
+      <div class="dashboard-state" role="status"><span class="loading-orbit" aria-hidden="true"></span> Cargando cuentas…</div>
+    } @else if (loadError()) {
+      <p class="form-message error" role="alert">{{ loadError() }}</p>
+      <button type="button" class="secondary-button" (click)="load()">Reintentar</button>
+    } @else if (visibleUsers().length) {
+      <div class="dashboard-table-wrap" role="region" aria-label="Listado de cuentas" tabindex="0">
+        <table class="dashboard-table">
+          <thead><tr><th scope="col">Cuenta</th><th scope="col">Correo</th><th scope="col">Rol</th><th scope="col">Estado</th><th scope="col">Acción</th></tr></thead>
+          <tbody>
+            @for (user of visibleUsers(); track user.id) {
+              <tr>
+                <th scope="row">
+                  <div class="dashboard-person">
+                    <app-avatar [person]="user"/>
+                    <div><strong>{{ user | nombreCompleto }}</strong><small>&#64;{{ user.username }}</small></div>
+                  </div>
+                </th>
+                <td>{{ user.email }}</td>
+                <td>{{ user.role | rolCuenta }}</td>
+                <td><span [appEstadoCuenta]="user.active">{{ user.active ? 'Habilitada' : 'Deshabilitada' }}</span></td>
+                <td>
+                  @if (user.id === auth.user()?.id) {
+                    <span class="dashboard-own">Tu cuenta</span>
+                  } @else {
+                    <button type="button" class="dashboard-action" (click)="askStatus(user)"
+                      [attr.aria-label]="(user.active ? 'Deshabilitar ' : 'Habilitar ') + user.username">
+                      {{ user.active ? 'Deshabilitar' : 'Habilitar' }}
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="dashboard-state">No hay cuentas que coincidan con la búsqueda.</p>
+    }
+  </section>
+</main>
+
+<dialog #createDialog class="modal-card dashboard-dialog register-form" aria-labelledby="create-account-title" (cancel)="closeForm($event)">
+  <div class="dashboard-dialog-heading">
+    <h2 id="create-account-title">Nueva cuenta<span>.</span></h2>
+    <button type="button" class="icon-button" aria-label="Cerrar formulario" [disabled]="saving()" (click)="closeForm()">×</button>
+  </div>
+  @if (creating()) {
+    <app-account-form [administrative]="true" [saving]="saving()" [requestError]="saveError()" (save)="createUser($event)"/>
+  }
+</dialog>
+<dialog #statusDialog class="modal-card dashboard-dialog dashboard-dialog-small" aria-labelledby="account-state-title" (cancel)="closeStatus($event)">
+  @if (target(); as user) {
+    <h2 id="account-state-title">{{ user.active ? '¿Deshabilitar la cuenta?' : '¿Habilitar la cuenta?' }}</h2>
+    <p>{{ user | nombreCompleto }} {{ user.active ? 'perderá acceso a su sesión.' : 'podrá volver a iniciar sesión.' }}</p>
+    @if (statusError()) { <p class="form-message error" role="alert">{{ statusError() }}</p> }
+    <div class="confirm-actions">
+      <button type="button" class="secondary-button" autofocus [disabled]="updating()" (click)="closeStatus()">Cancelar</button>
+      <button type="button" class="primary-button" [disabled]="updating()" (click)="updateStatus()">
+        {{ updating() ? 'Guardando…' : user.active ? 'Deshabilitar' : 'Habilitar' }}
+      </button>
+    </div>
+  }
+</dialog>

@@ -5,7 +5,9 @@
   </nav>
 
   @if (item(); as post) {
-    <app-post-card [post]="post" [expanded]="true" [busy]="liking()" (like)="toggleLike($event)"/>
+    <app-post-card [post]="post" [expanded]="true" [busy]="liking() || deleting()"
+      [canDelete]="auth.user()?.role === 'administrador' || auth.user()?.id === post.author.id"
+      (like)="toggleLike($event)" (remove)="askToDelete()"/>
     @if (likeError()) { <p class="form-message error" role="alert">{{ likeError() }}</p> }
     @for (activePost of [post]; track activePost.id) {
       <app-post-comments [postId]="activePost.id"/>
@@ -19,4 +21,15 @@
   } @else {
     <div class="feed-loading" role="status"><span class="loading-orbit" aria-hidden="true"></span> Abriendo publicación…</div>
   }
+  <dialog #deleteDialog class="modal-card comment-dialog" aria-labelledby="remove-post-title" (cancel)="cancelDelete($event)">
+    <h2 id="remove-post-title">¿Eliminar esta <em>publicación?</em></h2>
+    <p>La publicación y sus comentarios dejarán de aparecer en Trama.</p>
+    @if (deleteError()) { <p class="form-message error" role="alert">{{ deleteError() }}</p> }
+    <div class="confirm-actions">
+      <button type="button" class="secondary-button" autofocus [disabled]="deleting()" (click)="cancelDelete()">Cancelar</button>
+      <button type="button" class="primary-button" [disabled]="deleting()" (click)="confirmDelete()">
+        {{ deleting() ? 'Eliminando…' : 'Eliminar publicación' }}
+      </button>
+    </div>
+  </dialog>
 </main>

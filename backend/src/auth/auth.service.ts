@@ -1,36 +1,21 @@
-import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
-import { ImageService } from '../common/image.service';
+import type { ImageService } from '../common/image.service';
 import { User, UserDocument, publicUser } from '../users/user.schema';
+import { UsersService } from '../users/users.service';
 import { LoginDto, RegisterDto } from './auth.dto';
 import type { SessionClaims } from './session.guard';
 
 @Injectable()
 export class AuthService {
   constructor(@InjectModel(User.name) private readonly users: Model<User>, private readonly jwt: JwtService,
-    private readonly images: ImageService) {}
+    private readonly accounts: UsersService) {}
 
-  async register(dto: RegisterDto, avatar?: Express.Multer.File) {
-    if (dto.password !== dto.repetirPassword) throw new BadRequestException('Las contraseñas no coinciden.');
-    if (new Date(dto.fechaNacimiento) > new Date()) throw new BadRequestException('La fecha de nacimiento no puede ser futura.');
-    const email = dto.email.trim().toLowerCase();
-    const username = dto.username.trim().toLowerCase();
-    if (await this.users.exists({ $or: [{ email }, { username }] })) throw new ConflictException('El correo o nombre de usuario ya está registrado.');
-    const avatarUrl = await this.images.save(avatar);
-    try {
-      const user = await this.users.create({ nombre: dto.nombre.trim(), apellido: dto.apellido.trim(),
-        email, username, passwordHash: await bcrypt.hash(dto.password, 12),
-        fechaNacimiento: dto.fechaNacimiento, bio: dto.bio.trim(), avatarUrl, role: 'usuario' });
-      return this.session(user);
-    } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 11000) {
-        throw new ConflictException('El correo o nombre de usuario ya está registrado.');
-      }
-      throw error;
-    }
+  async register(dto: RegisterDto, avatar?: Parameters<ImageService['save']>[0]) {
+    return this.session(await this.accounts.createAccount(dto, 'usuario', avatar));
   }
 
   async login(dto: LoginDto) {

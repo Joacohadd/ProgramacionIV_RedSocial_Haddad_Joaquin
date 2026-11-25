@@ -2,7 +2,6 @@ import { DatePipe } from '@angular/common';
 import { Component, DestroyRef, ElementRef, OnInit, inject, input, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { PostComment } from '../core/models';
 import { AuthService } from '../core/services/auth.service';
 import { errorMessage } from '../core/services/http-error';
@@ -12,12 +11,12 @@ import { Avatar } from './ui';
 @Component({
   selector: 'app-post-comments',
   standalone: true,
-  imports: [Avatar, DatePipe, ReactiveFormsModule, RouterLink],
+  imports: [Avatar, DatePipe, ReactiveFormsModule],
   templateUrl: './post-comments.html',
 })
 export class PostComments implements OnInit {
   readonly postId = input.required<string>();
-  readonly preview = input(false);
+  private readonly pageSize = 5;
   private readonly posts = inject(PostsService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly deleteDialog = viewChild<ElementRef<HTMLDialogElement>>('deleteDialog');
@@ -54,7 +53,7 @@ export class PostComments implements OnInit {
     if (this.loading() || this.posting() || this.deleting()) return;
     this.loading.set(true);
     this.loadError.set('');
-    this.posts.comments(this.postId(), this.offset, this.preview() ? 2 : 10)
+    this.posts.comments(this.postId(), this.offset, this.pageSize)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: page => {

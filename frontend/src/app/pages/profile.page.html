@@ -11,7 +11,6 @@
           @for (post of posts(); track post.id; let i = $index) {
             <div class="profile-post-item">
               <app-post-card [post]="post" [index]="i + 1" [busy]="busyId() === post.id" (like)="toggleLike($event)"/>
-              <app-post-comments [postId]="post.id" [preview]="true"/>
             </div>
           }
         }

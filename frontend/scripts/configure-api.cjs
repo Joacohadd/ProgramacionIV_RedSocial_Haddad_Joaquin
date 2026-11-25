@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { createHash } = require('node:crypto');
 
 const value = process.env.TRAMA_API_URL?.trim();
 const isVercel = process.argv.includes('--require-public-url') || process.env.VERCEL === '1' || Boolean(process.env.VERCEL_ENV);
@@ -43,4 +44,11 @@ if (isVercel) {
   index = index.replace(imageLimit, (_match, start, end) => `${start}4194304${end}`);
 }
 fs.writeFileSync(indexPath, index);
+const workerManifestPath = path.join(path.dirname(indexPath), 'ngsw.json');
+if (fs.existsSync(workerManifestPath)) {
+  const workerManifest = JSON.parse(fs.readFileSync(workerManifestPath, 'utf8'));
+  // Angular calcula el hash antes de que este script inyecte la URL pública.
+  workerManifest.hashTable['/index.html'] = createHash('sha1').update(index, 'utf8').digest('hex');
+  fs.writeFileSync(workerManifestPath, JSON.stringify(workerManifest, null, 2));
+}
 console.log('Dirección pública del backend configurada para esta compilación.');

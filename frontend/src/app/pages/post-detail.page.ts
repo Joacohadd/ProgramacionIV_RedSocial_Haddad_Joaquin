@@ -1,8 +1,9 @@
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, combineLatest, startWith, switchMap } from 'rxjs';
 import { Post } from '../core/models';
+import { AuthService } from '../core/services/auth.service';
 import { PostsService } from '../core/services/posts.service';
 import { errorMessage } from '../core/services/http-error';
 import { PostComments } from '../shared/post-comments';
@@ -15,14 +16,19 @@ import { PostCard, SiteHeader } from '../shared/ui';
 })
 export class PostDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly posts = inject(PostsService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly retry = new Subject<void>();
+  private readonly deleteDialog = viewChild.required<ElementRef<HTMLDialogElement>>('deleteDialog');
+  readonly auth = inject(AuthService);
   readonly item = signal<Post | null>(null);
   readonly error = signal('');
   readonly likeError = signal('');
   readonly liking = signal(false);
   readonly notFound = signal(false);
+  readonly deleting = signal(false);
+  readonly deleteError = signal('');
 
   ngOnInit() {
     combineLatest([this.route.paramMap, this.retry.pipe(startWith(undefined))]).pipe(
@@ -43,6 +49,34 @@ export class PostDetailPage implements OnInit {
   }
 
   reload() { this.retry.next(); }
+
+  askToDelete() {
+    this.deleteError.set('');
+    this.deleteDialog().nativeElement.showModal();
+  }
+
+  cancelDelete(event?: Event) {
+    event?.preventDefault();
+    if (!this.deleting()) this.deleteDialog().nativeElement.close();
+  }
+
+  confirmDelete() {
+    const post = this.item();
+    if (!post || this.deleting()) return;
+    this.deleting.set(true);
+    this.deleteError.set('');
+    this.posts.remove(post.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.deleting.set(false);
+        this.cancelDelete();
+        void this.router.navigateByUrl('/publicaciones');
+      },
+      error: error => {
+        this.deleteError.set(errorMessage(error));
+        this.deleting.set(false);
+      },
+    });
+  }
 
   toggleLike(post: Post) {
     if (this.liking()) return;

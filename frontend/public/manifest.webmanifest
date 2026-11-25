@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "Trama — lo que nos conecta",
+  "short_name": "Trama",
+  "lang": "es-AR",
+  "description": "Una red social para leer, compartir y conectar.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#3048d8",
+  "background_color": "#f0f2f8",
+  "icons": [
+    { "src": "/icons/trama-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/trama-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/trama-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

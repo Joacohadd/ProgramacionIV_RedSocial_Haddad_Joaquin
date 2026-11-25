@@ -11,7 +11,11 @@ const { AuthController } = require('../dist/auth/auth.controller');
 const { AuthService } = require('../dist/auth/auth.service');
 const { SessionGuard } = require('../dist/auth/session.guard');
 const { PasswordResetService } = require('../dist/auth/password-reset.service');
-const { ImageService } = require('../dist/common/image.service');
+const { AdminGuard } = require('../dist/auth/admin.guard');
+const { UsersController } = require('../dist/users/users.controller');
+const { UsersService } = require('../dist/users/users.service');
+const { StatsController } = require('../dist/posts/stats.controller');
+const { StatsService } = require('../dist/posts/stats.service');
 const { CommentsController } = require('../dist/posts/comments.controller');
 const { CommentsService } = require('../dist/posts/comments.service');
 const { PostsService } = require('../dist/posts/posts.service');
@@ -22,6 +26,7 @@ const user = {
 };
 user.id = user._id.toString();
 const otherId = new Types.ObjectId().toString();
+const adminId = new Types.ObjectId().toString();
 const postId = new Types.ObjectId();
 const comments = Array.from({ length: 3 }, (_, index) => ({
   id: new Types.ObjectId().toString(),
@@ -88,14 +93,19 @@ const commentModel = {
 class TestModule {}
 Module({
   imports: [JwtModule.register({ secret: randomBytes(32).toString('hex'), signOptions: { expiresIn: '15m' } })],
-  controllers: [AuthController, CommentsController],
+  controllers: [AuthController, CommentsController, UsersController, StatsController],
   providers: [
-    AuthService, SessionGuard, CommentsService,
+    AuthService, SessionGuard, CommentsService, AdminGuard,
     { provide: PasswordResetService, useValue: {} },
-    { provide: ImageService, useValue: {} },
+    { provide: UsersService, useValue: { listForAdmin: async () => [] } },
+    { provide: StatsService, useValue: {
+      postsByUser: async range => [range],
+      commentsOverTime: async range => [range],
+      commentsByPost: async range => [range],
+    } },
     { provide: getModelToken('User'), useValue: {
-      findById: async id => id === user.id ? user : id === otherId
-        ? { ...user, _id: new Types.ObjectId(otherId), id: otherId } : null,
+      findById: async id => id === user.id ? user : id === otherId || id === adminId
+        ? { ...user, _id: new Types.ObjectId(id), id, role: id === adminId ? 'administrador' : 'usuario' } : null,
     } },
     { provide: getModelToken('Comment'), useValue: commentModel },
     { provide: PostsService, useValue: {
@@ -213,4 +223,22 @@ test('comentarios: solo el autor puede eliminar y la baja oculta el comentario e
   assert.ok(!(await afterDeletion.json()).items.some(item => item.id === commentId));
   assert.equal((await request(path, { method: 'DELETE', token })).status, 404);
   assert.equal((await request(path, { method: 'PUT', token, body: { message: 'Cambio posterior' } })).status, 404);
+});
+
+test('usuarios y estadísticas: las rutas verifican el rol actual almacenado en MongoDB', async () => {
+  const claimedAdmin = jwt.sign({ ...claims, role: 'administrador' });
+  const actualAdmin = jwt.sign({ ...claims, sub: adminId, role: 'usuario' });
+  for (const [method, path] of [
+    ['GET', '/users'], ['POST', '/users'], ['DELETE', `/users/${user.id}`],
+    ['POST', `/users/${user.id}/enable`], ['GET', '/stats/posts-by-user'],
+    ['GET', '/stats/comments-over-time'], ['GET', '/stats/comments-by-post'],
+  ]) {
+    assert.equal((await request(path, { method })).status, 401);
+    assert.equal((await request(path, { method, token: claimedAdmin })).status, 403);
+  }
+  assert.equal((await request('/users', { token: actualAdmin })).status, 200);
+  assert.equal((await request('/stats/posts-by-user?from=2026-02-30&to=2026-03-01', { token: actualAdmin })).status, 400);
+  const stats = await request('/stats/posts-by-user?from=2026-03-01&to=2026-03-03', { token: actualAdmin });
+  assert.equal(stats.status, 200);
+  assert.deepEqual(await stats.json(), [{ from: '2026-03-01', to: '2026-03-03' }]);
 });

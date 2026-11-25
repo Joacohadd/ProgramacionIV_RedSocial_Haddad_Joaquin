@@ -11,7 +11,8 @@
         <div class="posts-list">
           @for (post of posts(); track post.id; let i = $index) {
             <app-post-card [post]="post" [index]="offset() + i + 1"
-              [canDelete]="post.author.id === auth.user()?.id" [canComment]="true" [busy]="busyId() === post.id"
+              [canDelete]="post.author.id === auth.user()?.id || auth.user()?.role === 'administrador'"
+              [canComment]="true" [busy]="busyId() === post.id"
               (like)="toggleLike($event)" (comment)="openComment($event)" (remove)="deleteTarget.set($event)"/>
           }
         </div>

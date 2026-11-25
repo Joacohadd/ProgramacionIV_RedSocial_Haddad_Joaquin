@@ -95,12 +95,6 @@
 .comment-status, .comment-empty { display: flex; align-items: center; gap: .55rem; color: var(--muted); font-size: .86rem; }
 .comment-status .loading-orbit { flex: none; }
 .comment-more { margin-top: .75rem; }
-.conversation-preview { margin: 0; padding: 1rem; border: 1px solid var(--line); border-top: 0; background: #f5f7fd; }
-.conversation-preview .conversation-header { justify-content: space-between; flex-wrap: wrap; margin-bottom: .6rem; }
-.conversation-preview .conversation-header a { color: var(--blue); font-weight: 750; font-size: .75rem; }
-.conversation-preview .conversation-header a:hover { text-decoration: underline; }
-.conversation-preview .comment-entry { padding: .7rem 0; }
-.conversation-preview .comment-message { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 
 .session-loading { display: grid; place-items: center; min-height: 100vh; padding: 1.5rem; }
 .session-dialog {

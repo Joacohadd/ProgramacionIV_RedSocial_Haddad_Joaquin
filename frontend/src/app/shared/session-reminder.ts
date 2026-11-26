@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../core/services/auth.service';
 import { errorMessage } from '../core/services/http-error';
 
-const warningBefore = 5 * 60_000;
+const warningBefore = 60_000;
 
 function expiresAt(token: string): number | undefined {
   try {
@@ -25,7 +25,7 @@ export class SessionReminder {
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
   private readonly dismissedToken = signal<string | null>(null);
-  readonly minutes = signal(5);
+  readonly minutes = signal(1);
   readonly renewing = signal(false);
   readonly error = signal('');
 

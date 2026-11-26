@@ -3,7 +3,7 @@
     <p class="section-index">SESIÓN</p>
     <h2 id="session-reminder-title">¿Seguimos <em>en Trama?</em></h2>
     <p>{{ minutes() === 1 ? 'Queda 1 minuto' : 'Quedan ' + minutes() + ' minutos' }} de sesión.
-      Podés extenderla por otros 15 minutos.</p>
+      Podés extenderla por otros 3 minutos.</p>
     @if (error()) { <p class="form-message error" role="alert">{{ error() }}</p> }
     <div class="session-ticket-actions">
       <button type="button" class="secondary-button" [disabled]="renewing()" (click)="dismiss()">Ahora no</button>

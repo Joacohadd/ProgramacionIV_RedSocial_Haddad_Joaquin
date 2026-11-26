@@ -92,7 +92,7 @@ const commentModel = {
 
 class TestModule {}
 Module({
-  imports: [JwtModule.register({ secret: randomBytes(32).toString('hex'), signOptions: { expiresIn: '15m' } })],
+  imports: [JwtModule.register({ secret: randomBytes(32).toString('hex'), signOptions: { expiresIn: '3m' } })],
   controllers: [AuthController, CommentsController, UsersController, StatsController],
   providers: [
     AuthService, SessionGuard, CommentsService, AdminGuard,
@@ -142,7 +142,7 @@ const claims = { sub: user.id, role: user.role, ver: user.tokenVersion };
 const commentRoute = `/posts/${postId}/comments`;
 
 test('authorize y refresh requieren un JWT vigente y conservan la identidad al renovar', async () => {
-  const token = jwt.sign({ ...claims, iat: Math.floor(Date.now() / 1000) - 600 });
+  const token = jwt.sign({ ...claims, iat: Math.floor(Date.now() / 1000) - 120 });
   const authorized = await request('/auth/authorize', { method: 'POST', token });
   assert.equal(authorized.status, 200);
   assert.equal((await authorized.json()).id, user.id);
@@ -152,7 +152,7 @@ test('authorize y refresh requieren un JWT vigente y conservan la identidad al r
   const session = await refreshed.json();
   const { iat, exp, ...identity } = jwt.verify(session.token);
   assert.deepEqual(identity, claims);
-  assert.equal(exp - iat, 900);
+  assert.equal(exp - iat, 180);
   assert.ok(exp > jwt.verify(token).exp);
 
   const expired = jwt.sign(claims, { expiresIn: -1 });

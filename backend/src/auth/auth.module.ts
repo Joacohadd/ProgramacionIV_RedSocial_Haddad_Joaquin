@@ -9,6 +9,6 @@ import { PasswordResetMailer } from './password-reset.mailer';
 import { PasswordResetService } from './password-reset.service';
 import { AdminGuard } from './admin.guard';
 
-@Module({ imports: [UsersModule, JwtModule.register({ secret: process.env.JWT_SECRET, signOptions: { expiresIn: '15m' } })],
+@Module({ imports: [UsersModule, JwtModule.register({ secret: process.env.JWT_SECRET, signOptions: { expiresIn: '3m' } })],
   controllers: [AuthController, UsersController], providers: [AuthService, SessionGuard, AdminGuard, PasswordResetMailer, PasswordResetService], exports: [SessionGuard, AdminGuard, JwtModule] })
 export class AuthModule {}

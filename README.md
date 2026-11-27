@@ -1,6 +1,6 @@
 # Trama · Red social (TP 2, Programación IV)
 
-Implementación de los **Sprints 1 a 4** del enunciado. Angular está en [`frontend`](frontend/) y NestJS + MongoDB en [`backend`](backend/).
+Implementación de los **Sprints 1 a 5** del enunciado. Angular está en [`frontend`](frontend/) y NestJS + MongoDB en [`backend`](backend/).
 
 ## Qué está implementado
 
@@ -10,8 +10,11 @@ Implementación de los **Sprints 1 a 4** del enunciado. Angular está en [`front
 | 2 | Feed real, orden por fecha o likes, paginación, nueva publicación con imagen, like/quitar like, baja propia con modal, Mi Perfil y últimas tres publicaciones | Alta, listado paginado y filtrado, baja lógica, likes únicos; identidad y permisos validados en servidor |
 | 3 | Detalle de publicación, comentarios, edición propia, pantalla de carga y aviso de renovación | Detalle protegido, colección de comentarios con autor y fecha, edición autorizada, validación y renovación de JWT |
 | 4 | Administración de cuentas, moderación, tres gráficos con rango de fechas, PWA, tres pipes y tres directivas propias | Alta administrativa, baja y rehabilitación de usuarios, estadísticas agregadas y guard de rol |
+| 5 | Scroll infinito en Explorar, perfiles de otros usuarios y gráficos de actividad | Feed por cursor, datos públicos de perfil y contadores de ingresos, visitas ajenas y likes por día |
 
 En Mi Perfil se muestran las últimas tres publicaciones propias. En Explorar podés comentar directamente y abrir el hilo con «Ver comentarios». En el detalle se cargan cinco mensajes iniciales y otros cinco con «Cargar más comentarios». Desde el hilo podés editar o eliminar tus comentarios. La edición de perfil y foto usa `PATCH /users/me`.
+
+El nombre y el avatar de un autor abren su perfil en `/perfiles/:id`. Ahí se ven su nombre, usuario, foto, descripción y las tres publicaciones activas más recientes. Las cuentas administradoras pueden eliminar publicaciones desde ese perfil.
 
 Por pedido posterior, se agregó recuperación de contraseña: desde Login se solicita un enlace para el correo o usuario registrado, se elige una clave nueva y se vuelve a iniciar sesión. No revela si una cuenta existe. El enlace vence a los 30 minutos, solo sirve una vez y al usarlo invalida las sesiones anteriores. Esta función es adicional a los requisitos de los dos primeros sprints.
 
@@ -54,11 +57,13 @@ Abrir `http://localhost:4200`. Para un build público, definir `TRAMA_API_URL` c
 | POST | `/auth/password/forgot` | Solicitar enlace de recuperación con correo o usuario |
 | POST | `/auth/password/reset` | Cambiar la contraseña con un enlace vigente |
 | PATCH | `/users/me` | Actualizar los datos del propio perfil y foto opcional; requiere JWT |
+| GET | `/users/:id/profile` | Ver los datos públicos de un perfil activo y contar una visita ajena |
 | GET | `/users` | Listar cuentas como administrador |
 | POST | `/users` | Crear una cuenta con rol y foto opcional como administrador |
 | DELETE | `/users/:id` | Deshabilitar una cuenta e invalidar sus sesiones |
 | POST | `/users/:id/enable` | Rehabilitar una cuenta |
 | GET | `/posts?sort=date\|likes&offset=0&limit=5&userId=...` | Listar publicaciones activas |
+| GET | `/posts/feed?sort=date\|likes&limit=5&after=...` | Obtener la siguiente tanda del feed con el cursor devuelto por la API |
 | POST | `/posts` | Crear publicación; `multipart/form-data` con `image` opcional |
 | GET | `/posts/:id` | Ver una publicación activa |
 | DELETE | `/posts/:id` | Baja lógica, autor o administrador |
@@ -71,10 +76,15 @@ Abrir `http://localhost:4200`. Para un build público, definir `TRAMA_API_URL` c
 | GET | `/stats/posts-by-user` | Contar publicaciones activas por autor |
 | GET | `/stats/comments-over-time` | Contar comentarios activos por día |
 | GET | `/stats/comments-by-post` | Contar comentarios activos por publicación |
+| GET | `/stats/logins-by-user` | Contar inicios de sesión válidos por usuario |
+| GET | `/stats/profile-visits` | Contar visitas de otras personas al perfil de la cuenta administradora autenticada |
+| GET | `/stats/likes-by-day` | Contar Me gusta otorgados por día |
 
 Todas las rutas de publicaciones requieren JWT. `register` y `login` devuelven `{ user, token }` sin el hash de la contraseña. El registro público fija `role: usuario`; el rol nunca se toma del formulario. Respuestas: 201 al crear, 200 en lecturas/acciones correctas, 400 en validación, 401 sin sesión/credenciales inválidas, 403 en permisos, 404 para post inexistente o dado de baja y 409 en duplicados.
 
-Las rutas administrativas requieren JWT y comprueban el rol contra el usuario activo en MongoDB. Las tres estadísticas reciben `from` y `to` como fechas `AAAA-MM-DD`, ambas inclusive en UTC. Las publicaciones o comentarios dados de baja quedan fuera de las series.
+Las rutas administrativas requieren JWT y comprueban el rol contra el usuario activo en MongoDB. Las estadísticas reciben `from` y `to` como fechas `AAAA-MM-DD`, ambas inclusive en UTC. Las series de publicaciones y comentarios excluyen el contenido dado de baja.
+
+Las métricas de actividad se registran a partir del Sprint 5. Cada inicio de sesión correcto suma un ingreso. Cada apertura del perfil por otra cuenta suma una visita, incluidas las reaperturas. Cada Me gusta aceptado suma en el día en que se otorgó. Quitar el Me gusta conserva el registro histórico.
 
 ## Decisiones de alcance
 
@@ -102,7 +112,7 @@ Las pruebas ejecutan solicitudes HTTP locales para verificar autorización, reno
 
 ## Publicación
 
-Publicá el frontend y el backend del Sprint 4 juntos para habilitar las funciones de administración en la versión publicada. El backend debe permitir `PUT` en CORS para guardar las ediciones de comentarios entre dominios.
+Publicá el frontend y el backend de una misma versión para que las pantallas usen las rutas correspondientes. El backend debe permitir `PUT` en CORS para guardar las ediciones de comentarios entre dominios.
 
 Trama está disponible en [trama-gilt-one.vercel.app](https://trama-gilt-one.vercel.app). El frontend se aloja en Vercel y utiliza el backend publicado en Render: `https://programacioniv-redsocial-haddad-joaquin.onrender.com`. Ambos servicios están conectados a este repositorio y usan respectivamente los directorios `frontend` y `backend`. También permanece desplegada una copia de la API en Vercel (`https://trama-api.vercel.app`), pero el frontend publicado apunta a Render.
 

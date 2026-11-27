@@ -18,56 +18,9 @@
     </div>
   } @else if (range(); as period) {
     <div class="dashboard-charts">
-      <section class="dashboard-panel chart-panel chart-timeline" aria-labelledby="timeline-title">
-        <div class="chart-heading">
-          <h2 id="timeline-title">Comentarios por día</h2>
-          <p class="chart-total"><strong>{{ commentTotal() }}</strong> en el período</p>
-        </div>
-        @if (days().length) {
-          <div class="timeline-plot">
-            <div class="timeline-y" aria-hidden="true"><span>{{ maxDaily() }}</span><span>0</span></div>
-            <svg viewBox="0 0 700 175" preserveAspectRatio="none" aria-hidden="true">
-              <path class="timeline-grid" d="M20 25H680 M20 90H680 M20 155H680"/>
-              <polyline class="timeline-line" [attr.points]="polyline()"/>
-              @for (point of linePoints(); track point.date) {
-                @if (point.count) { <circle class="timeline-dot" [attr.cx]="point.x" [attr.cy]="point.y" r="4"/> }
-              }
-            </svg>
-          </div>
-          <div class="timeline-dates" aria-hidden="true">
-            <span>{{ (period.from + 'T00:00:00Z') | date:'d MMM y':'UTC':'es-AR' }}</span>
-            @if (period.from !== period.to) { <span>{{ (period.to + 'T00:00:00Z') | date:'d MMM y':'UTC':'es-AR' }}</span> }
-          </div>
-          <details class="chart-values">
-            <summary>Ver valores por día</summary>
-            <ul>@for (row of days(); track row.date) {
-              <li><time [attr.datetime]="row.date">{{ (row.date + 'T00:00:00Z') | date:'d MMM y':'UTC':'es-AR' }}</time><strong>{{ row.count }}</strong></li>
-            }</ul>
-          </details>
-        } @else {
-          <p class="chart-empty">No hubo comentarios en este rango.</p>
-        }
-      </section>
-
-      <section class="dashboard-panel chart-panel" aria-labelledby="posts-by-user-title">
-        <div class="chart-heading">
-          <h2 id="posts-by-user-title">Publicaciones por usuario</h2>
-          <p class="chart-total"><strong>{{ postTotal() }}</strong> en el período</p>
-        </div>
-        @if (posts().length) {
-          <ol class="chart-bars">
-            @for (row of posts(); track row.id) {
-              <li>
-                <div><span>{{ row.label }}</span><strong>{{ row.count }}</strong></div>
-                <div class="bar-track" aria-hidden="true"><span [style.width.%]="row.count * 100 / maxPosts()"></span></div>
-              </li>
-            }
-          </ol>
-        } @else {
-          <p class="chart-empty">No hubo publicaciones en este rango.</p>
-        }
-      </section>
-
+      <app-daily-activity class="chart-timeline" title="Comentarios por día" [range]="period" [rows]="days()"
+        emptyMessage="No hubo comentarios en este rango."/>
+      <app-ranked-activity title="Publicaciones por usuario" [rows]="posts()" emptyMessage="No hubo publicaciones en este rango."/>
       <section class="dashboard-panel chart-panel" aria-labelledby="comments-by-post-title">
         <div class="chart-heading"><h2 id="comments-by-post-title">Comentarios por publicación</h2></div>
         @if (comments().length) {
@@ -93,5 +46,15 @@
         }
       </section>
     </div>
+    <section class="dashboard-activity" aria-labelledby="activity-title">
+      <h2 id="activity-title">Actividad de la comunidad</h2>
+      <div class="dashboard-charts">
+        <app-ranked-activity title="Ingresos por usuario" [rows]="logins()" emptyMessage="No hubo ingresos registrados en este rango."/>
+        <app-daily-activity title="Visitas a mi perfil" [range]="period" [rows]="profileVisits()"
+          emptyMessage="Nadie visitó tu perfil en este rango."/>
+        <app-daily-activity class="chart-timeline" title="Me gusta otorgados por día" [range]="period" [rows]="likes()"
+          appearance="bars" emptyMessage="No hubo Me gusta registrados en este rango."/>
+      </div>
+    </section>
   }
 </main>

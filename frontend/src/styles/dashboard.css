@@ -156,6 +156,7 @@
 .timeline-grid { fill: none; stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .timeline-line { fill: none; stroke: var(--blue); stroke-width: 3px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .timeline-dot { fill: var(--blue); }
+.timeline-bar { fill: var(--blue); }
 .timeline-dates { display: flex; justify-content: space-between; gap: 10px; padding-inline: 4%; color: var(--muted); font-size: .76rem; }
 .chart-bars, .chart-legend, .chart-values ul { list-style: none; margin: 16px 0 0; padding: 0; }
 .chart-bars { display: grid; gap: 12px; }
@@ -184,6 +185,16 @@
 .chart-values { margin-top: 16px; }
 .chart-values summary { cursor: pointer; width: fit-content; color: var(--blue); font-weight: 800; }
 .chart-values li { padding: 7px 0; border-top: 1px solid var(--line); }
+
+.dashboard-activity { margin-top: 36px; }
+.dashboard-activity > h2 {
+  margin: 0 0 18px;
+  padding-left: 13px;
+  border-left: 5px solid var(--blue);
+  font: 800 clamp(1.5rem, 3vw, 2.55rem)/1.05 var(--display);
+  letter-spacing: -.04em;
+}
+.dashboard-charts > app-ranked-activity, .dashboard-charts > app-daily-activity { min-width: 0; }
 
 @media (max-width: 760px) {
   .dashboard-banner { display: block; }

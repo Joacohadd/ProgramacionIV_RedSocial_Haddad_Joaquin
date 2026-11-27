@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, HttpCode, Param, Patch, Post, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminGuard } from '../auth/admin.guard';
 import { MAX_IMAGE_BYTES } from '../common/image-limits';
@@ -6,6 +6,8 @@ import { AuthenticatedRequest, SessionGuard } from '../auth/session.guard';
 import { UpdateProfileDto } from './update-profile.dto';
 import { adminUser, UsersService } from './users.service';
 import { CreateAdminUserDto } from './create-admin-user.dto';
+
+type AvatarFile = Parameters<UsersService['createAccount']>[2];
 
 @Controller('users')
 @UseGuards(SessionGuard)
@@ -18,10 +20,16 @@ export class UsersController {
     return this.users.listForAdmin();
   }
 
+  @Get(':id/profile')
+  @Header('Cache-Control', 'private, no-store')
+  profile(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.users.profile(id, req.actor);
+  }
+
   @Post()
   @UseGuards(AdminGuard)
   @UseInterceptors(FileInterceptor('avatar', { limits: { fileSize: MAX_IMAGE_BYTES } }))
-  async create(@Body() dto: CreateAdminUserDto, @UploadedFile() avatar?: Express.Multer.File) {
+  async create(@Body() dto: CreateAdminUserDto, @UploadedFile() avatar?: AvatarFile) {
     return adminUser(await this.users.createAccount(dto, dto.role, avatar));
   }
 
@@ -41,7 +49,7 @@ export class UsersController {
   @Patch('me')
   @UseInterceptors(FileInterceptor('avatar', { limits: { fileSize: MAX_IMAGE_BYTES } }))
   updateProfile(@Req() req: AuthenticatedRequest, @Body() dto: UpdateProfileDto,
-    @UploadedFile() avatar?: Express.Multer.File) {
+    @UploadedFile() avatar?: AvatarFile) {
     return this.users.updateProfile(req.actor, dto, avatar);
   }
 }

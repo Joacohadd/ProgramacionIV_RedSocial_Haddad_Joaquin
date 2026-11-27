@@ -103,6 +103,10 @@ test('like: la actualización exige que el usuario no haya dado like', async () 
   const result = await new PostsService(posts, {}).like(post.id, actor);
   assert.equal(filter.likes.$ne, actor._id);
   assert.equal(update.$inc.likesCount, 1);
+  const metrics = Object.entries(update.$inc).filter(([field]) => field.startsWith('likesByDay.'));
+  assert.equal(metrics.length, 1);
+  assert.match(metrics[0][0], /^likesByDay\.\d{4}-\d{2}-\d{2}$/);
+  assert.equal(metrics[0][1], 1);
   assert.equal(result.likesCount, 1);
 });
 

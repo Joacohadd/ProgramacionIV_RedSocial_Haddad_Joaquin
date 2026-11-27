@@ -40,6 +40,21 @@ export class UsersService {
     return users.map(adminUser);
   }
 
+  async profile(id: string, actor: UserDocument) {
+    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Perfil no encontrado.');
+    const filter = { _id: new Types.ObjectId(id), active: { $ne: false } };
+    const day = new Date().toISOString().slice(0, 10);
+    const query = actor.id === filter._id.toString()
+      ? this.users.findOne(filter)
+      : this.users.findOneAndUpdate(filter, { $inc: { [`profileViewsByDay.${day}`]: 1 } }, { new: true });
+    const user = await query.select('nombre apellido username avatarUrl bio').exec();
+    if (!user) throw new NotFoundException('Perfil no encontrado.');
+    return {
+      id: user.id, nombre: user.nombre, apellido: user.apellido, username: user.username,
+      avatarUrl: user.avatarUrl || null, bio: user.bio,
+    };
+  }
+
   async setActive(id: string, active: boolean, actor: UserDocument) {
     if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Usuario no encontrado.');
     if (!active && id.toLowerCase() === actor.id) {

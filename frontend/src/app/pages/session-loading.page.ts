@@ -41,7 +41,7 @@ export class SessionLoadingPage {
     }
 
     const requested = this.route.snapshot.queryParamMap.get('volver') ?? '';
-    const destination = /^\/(mi-perfil|publicaciones(?:\/[a-f\d]{24})?|dashboard\/(?:usuarios|estadisticas))$/i.test(requested)
+    const destination = /^\/(mi-perfil|perfiles\/[a-f\d]{24}|publicaciones(?:\/[a-f\d]{24})?|dashboard\/(?:usuarios|estadisticas))$/i.test(requested)
       ? requested : '/publicaciones';
     if (this.auth.authorized()) {
       this.go(destination);

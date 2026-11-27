@@ -17,6 +17,8 @@ export class User {
   @Prop() avatarUrl?: string;
   @Prop({ type: String, enum: ['usuario', 'administrador'], default: 'usuario' }) role!: 'usuario' | 'administrador';
   @Prop({ default: true }) active!: boolean;
+  @Prop({ type: Map, of: Number, select: false }) loginsByDay?: Map<string, number>;
+  @Prop({ type: Map, of: Number, select: false }) profileViewsByDay?: Map<string, number>;
 }
 export type UserDocument = HydratedDocument<User>;
 export const UserSchema = SchemaFactory.createForClass(User);

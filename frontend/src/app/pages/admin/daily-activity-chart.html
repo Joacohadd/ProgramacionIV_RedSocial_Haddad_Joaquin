@@ -1,0 +1,39 @@
+<section class="dashboard-panel chart-panel" [attr.aria-label]="title()">
+  <div class="chart-heading">
+    <h2>{{ title() }}</h2>
+    <p class="chart-total"><strong>{{ total() }}</strong> en el período</p>
+  </div>
+  @if (rows().length) {
+    <div class="timeline-plot">
+      <div class="timeline-y" aria-hidden="true"><span>{{ max() }}</span><span>0</span></div>
+      <svg viewBox="0 0 700 175" preserveAspectRatio="none" aria-hidden="true">
+        <path class="timeline-grid" d="M20 25H680 M20 90H680 M20 155H680"/>
+        @if (appearance() === 'line') {
+          <polyline class="timeline-line" [attr.points]="polyline()"/>
+        }
+        @for (point of points(); track point.date) {
+          @if (point.count) {
+            @if (appearance() === 'line') {
+              <circle class="timeline-dot" [attr.cx]="point.x" [attr.cy]="point.y" r="4"/>
+            } @else {
+              <rect class="timeline-bar" [attr.x]="point.x - barWidth() / 2" [attr.y]="point.y"
+                [attr.width]="barWidth()" [attr.height]="155 - point.y"/>
+            }
+          }
+        }
+      </svg>
+    </div>
+    <div class="timeline-dates" aria-hidden="true">
+      <span>{{ (range().from + 'T00:00:00Z') | date:'d MMM y':'UTC':'es-AR' }}</span>
+      @if (range().from !== range().to) { <span>{{ (range().to + 'T00:00:00Z') | date:'d MMM y':'UTC':'es-AR' }}</span> }
+    </div>
+    <details class="chart-values">
+      <summary>Ver valores por día</summary>
+      <ul>@for (row of rows(); track row.date) {
+        <li><time [attr.datetime]="row.date">{{ (row.date + 'T00:00:00Z') | date:'d MMM y':'UTC':'es-AR' }}</time><strong>{{ row.count }}</strong></li>
+      }</ul>
+    </details>
+  } @else {
+    <p class="chart-empty">{{ emptyMessage() }}</p>
+  }
+</section>

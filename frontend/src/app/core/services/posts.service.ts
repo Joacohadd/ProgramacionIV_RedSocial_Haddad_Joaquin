@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { API_URL } from '../config/api-url';
-import { CommentPage, Post, PostComment, PostPage } from '../models';
+import { CommentPage, FeedPageResult, Post, PostComment, PostPage } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class PostsService {
@@ -9,6 +9,9 @@ export class PostsService {
   list(params: { sort: 'date' | 'likes'; offset: number; limit: number; userId?: string }) {
     return this.http.get<PostPage>(`${API_URL}/posts`, { params: { sort: params.sort, offset: params.offset,
       limit: params.limit, ...(params.userId ? { userId: params.userId } : {}) } });
+  }
+  feed(sort: 'date' | 'likes', limit: number, after: string | null) {
+    return this.http.get<FeedPageResult>(`${API_URL}/posts/feed`, { params: { sort, limit, ...(after ? { after } : {}) } });
   }
   create(form: FormData) { return this.http.post<Post>(`${API_URL}/posts`, form); }
   detail(id: string) { return this.http.get<Post>(`${API_URL}/posts/${id}`); }

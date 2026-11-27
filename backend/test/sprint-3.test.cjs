@@ -102,6 +102,9 @@ Module({
       postsByUser: async range => [range],
       commentsOverTime: async range => [range],
       commentsByPost: async range => [range],
+      loginsByUser: async range => [range],
+      profileVisits: async (range, id) => [{ ...range, profileId: String(id) }],
+      likesByDay: async range => [range],
     } },
     { provide: getModelToken('User'), useValue: {
       findById: async id => id === user.id ? user : id === otherId || id === adminId
@@ -232,6 +235,7 @@ test('usuarios y estadísticas: las rutas verifican el rol actual almacenado en 
     ['GET', '/users'], ['POST', '/users'], ['DELETE', `/users/${user.id}`],
     ['POST', `/users/${user.id}/enable`], ['GET', '/stats/posts-by-user'],
     ['GET', '/stats/comments-over-time'], ['GET', '/stats/comments-by-post'],
+    ['GET', '/stats/logins-by-user'], ['GET', '/stats/profile-visits'], ['GET', '/stats/likes-by-day'],
   ]) {
     assert.equal((await request(path, { method })).status, 401);
     assert.equal((await request(path, { method, token: claimedAdmin })).status, 403);
@@ -241,4 +245,7 @@ test('usuarios y estadísticas: las rutas verifican el rol actual almacenado en 
   const stats = await request('/stats/posts-by-user?from=2026-03-01&to=2026-03-03', { token: actualAdmin });
   assert.equal(stats.status, 200);
   assert.deepEqual(await stats.json(), [{ from: '2026-03-01', to: '2026-03-03' }]);
+  const visits = await request('/stats/profile-visits?from=2026-03-01&to=2026-03-03', { token: actualAdmin });
+  assert.equal(visits.status, 200);
+  assert.deepEqual(await visits.json(), [{ from: '2026-03-01', to: '2026-03-03', profileId: adminId }]);
 });

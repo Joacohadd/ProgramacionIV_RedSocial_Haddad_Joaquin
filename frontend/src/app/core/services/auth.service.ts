@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { API_URL } from '../config/api-url';
-import { Session, User } from '../models';
+import { PublicProfile, Session, User } from '../models';
 
 function initialSession(): Session | null {
   try {
@@ -35,6 +35,7 @@ export class AuthService {
   resetPassword(token: string, password: string, repetirPassword: string) {
     return this.http.post<{ message: string }>(`${API_URL}/auth/password/reset`, { token, password, repetirPassword });
   }
+  profile(id: string) { return this.http.get<PublicProfile>(`${API_URL}/users/${id}/profile`); }
   updateProfile(form: FormData) { return this.http.patch<User>(`${API_URL}/users/me`, form); }
   save(session: Session) {
     localStorage.setItem('trama.session', JSON.stringify(session));

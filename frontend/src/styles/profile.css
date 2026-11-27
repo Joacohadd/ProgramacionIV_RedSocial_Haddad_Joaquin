@@ -37,6 +37,19 @@
   .profile-edit-actions button{width:100%}
 }
 
+.profile-hero-visitor {
+  min-height: 315px;
+  color: white;
+  background: #243bbf;
+  box-shadow: 7px 7px 0 var(--acid);
+}
+.profile-hero-visitor:before, .profile-hero-visitor:after { border-color: #bdc6ff45; }
+.profile-hero-visitor .profile-hero-decoration { color: #fff3; }
+.profile-hero-visitor h1 { font-size: clamp(2.8rem, 7vw, 5rem); overflow-wrap: anywhere; }
+.profile-hero-visitor h1 em, .profile-hero-visitor .profile-handle { color: var(--acid); }
+.profile-hero-visitor .profile-bio { margin-bottom: 0; color: #f1f3ff; }
+.profile-columns-visitor { display: block; max-width: 860px; margin-inline: auto; padding-top: 42px; }
+
 /* Keep the original clean treatment, with stronger reading size and contrast. */
 .profile-bio{max-width:520px;margin:0 0 20px;color:#101010;font-size:16px;font-weight:650;line-height:1.65}
 @media(max-width:520px){

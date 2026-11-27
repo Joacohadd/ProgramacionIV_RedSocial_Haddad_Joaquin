@@ -1,11 +1,13 @@
 import { DatePipe } from '@angular/common';
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { EMPTY, Subject, catchError, of, startWith, switchMap, tap } from 'rxjs';
 import { AuthService } from '../core/services/auth.service';
 import { errorMessage } from '../core/services/http-error';
 import { PostsService } from '../core/services/posts.service';
-import { Post } from '../core/models';
+import { Post, PublicProfile } from '../core/models';
 import { MAX_IMAGE_BYTES, MAX_IMAGE_MB } from '../core/config/api-url';
 import { Avatar, PostCard, SiteHeader } from '../shared/ui';
 
@@ -13,9 +15,19 @@ import { Avatar, PostCard, SiteHeader } from '../shared/ui';
 export class ProfilePage implements OnInit, OnDestroy {
   @ViewChild('editTrigger') private editTrigger?: ElementRef<HTMLButtonElement>;
   @ViewChild('editName') private editName?: ElementRef<HTMLInputElement>;
+  private readonly deleteDialog = viewChild.required<ElementRef<HTMLDialogElement>>('deleteDialog');
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly reloadPosts = new Subject<void>();
+  private readonly targetId = signal<string | null>(null);
+  private readonly otherProfile = signal<PublicProfile | null>(null);
   readonly auth = inject(AuthService); private readonly postsApi = inject(PostsService);
   private readonly fb = inject(FormBuilder).nonNullable;
   readonly posts = signal<Post[]>([]); readonly loading = signal(false); readonly error = signal(''); readonly busyId = signal('');
+  readonly isOwn = computed(() => !this.targetId() || this.auth.user()?.id === this.targetId());
+  readonly profile = computed(() => this.isOwn() ? this.auth.user() : this.otherProfile());
+  readonly deleteTarget = signal<Post | null>(null);
+  readonly actionError = signal('');
   readonly editing = signal(false); readonly saving = signal(false); readonly editError = signal('');
   readonly saved = signal(false); readonly avatarName = signal(''); readonly avatarPreview = signal<string | null>(null);
   readonly today = new Date().toISOString().slice(0, 10);
@@ -29,19 +41,88 @@ export class ProfilePage implements OnInit, OnDestroy {
     fechaNacimiento: ['', Validators.required],
     bio: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(280), Validators.pattern(/\S/)]],
   });
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    this.route.paramMap.pipe(
+      switchMap(params => {
+        this.targetId.set(params.get('id')?.toLowerCase() ?? null);
+        this.otherProfile.set(null);
+        this.posts.set([]);
+        this.actionError.set('');
+        return this.reloadPosts.pipe(startWith(undefined), switchMap(() => this.loadProfilePosts()));
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(page => {
+      this.posts.set(page.items);
+      this.loading.set(false);
+    });
+  }
+
   ngOnDestroy() { this.releaseAvatarPreview(); }
-  load() { const user = this.auth.user(); if (!user) return; this.loading.set(true); this.error.set('');
-    this.postsApi.list({ sort: 'date', offset: 0, limit: 3, userId: user.id }).subscribe({
-      next: page => { this.posts.set(page.items); this.loading.set(false); },
-      error: error => { this.error.set(errorMessage(error)); this.loading.set(false); },
-    }); }
-  toggleLike(post: Post) { this.busyId.set(post.id); const action = post.likedByMe ? this.postsApi.unlike(post.id) : this.postsApi.like(post.id);
-    action.subscribe({ next: updated => { this.posts.update(items => items.map(item => item.id === updated.id ? updated : item)); this.busyId.set(''); },
-      error: error => { this.error.set(errorMessage(error)); this.busyId.set(''); } }); }
+  load() { this.reloadPosts.next(); }
+
+  private loadProfilePosts() {
+    const saved = this.profile();
+    const id = this.targetId();
+    if (!saved && !id) return EMPTY;
+    this.loading.set(true);
+    this.error.set('');
+    // Reutilizar los datos al recargar las publicaciones mantiene una visita por apertura.
+    const profile$ = saved ? of(saved) : this.auth.profile(id!).pipe(tap(user => this.otherProfile.set(user)));
+    return profile$.pipe(
+      switchMap(user => this.postsApi.list({ sort: 'date', offset: 0, limit: 3, userId: user.id })),
+      catchError(error => {
+        this.error.set(errorMessage(error));
+        this.loading.set(false);
+        return EMPTY;
+      }),
+    );
+  }
+
+  toggleLike(post: Post) {
+    if (this.busyId()) return;
+    this.busyId.set(post.id);
+    this.actionError.set('');
+    const action = post.likedByMe ? this.postsApi.unlike(post.id) : this.postsApi.like(post.id);
+    action.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: updated => {
+        this.posts.update(items => items.map(item => item.id === updated.id ? updated : item));
+        this.busyId.set('');
+      },
+      error: error => { this.actionError.set(errorMessage(error)); this.busyId.set(''); },
+    });
+  }
+
+  askToDelete(post: Post) {
+    if (this.busyId()) return;
+    this.actionError.set('');
+    this.deleteTarget.set(post);
+    this.deleteDialog().nativeElement.showModal();
+  }
+
+  closeDelete(event?: Event) {
+    event?.preventDefault();
+    if (this.busyId()) return;
+    this.deleteDialog().nativeElement.close();
+    this.deleteTarget.set(null);
+  }
+
+  confirmDelete() {
+    const post = this.deleteTarget();
+    if (!post || this.busyId()) return;
+    this.busyId.set(post.id);
+    this.postsApi.remove(post.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.posts.update(items => items.filter(item => item.id !== post.id));
+        this.busyId.set('');
+        this.closeDelete();
+        this.load();
+      },
+      error: error => { this.busyId.set(''); this.closeDelete(); this.actionError.set(errorMessage(error)); },
+    });
+  }
   invalid(name: string) { const control = this.editForm.get(name); return !!control?.invalid && !!control.touched; }
   openEditor() {
-    const user = this.auth.user(); if (!user) return;
+    const user = this.auth.user(); if (!user || !this.isOwn()) return;
     this.releaseAvatarPreview(); this.avatarFile = null; this.avatarName.set('');
     this.editError.set(''); this.saved.set(false);
     this.editForm.reset({ nombre: user.nombre, apellido: user.apellido, email: user.email,
@@ -69,7 +150,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
   saveProfile() {
     this.editForm.markAllAsTouched();
-    if (this.editForm.invalid || this.saving()) return;
+    if (!this.isOwn() || this.editForm.invalid || this.saving()) return;
     const form = new FormData();
     for (const [key, value] of Object.entries(this.editForm.getRawValue())) form.append(key, value.trim());
     if (this.avatarFile) form.append('avatar', this.avatarFile);

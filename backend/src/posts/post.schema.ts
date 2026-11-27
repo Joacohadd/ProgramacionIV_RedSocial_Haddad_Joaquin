@@ -10,10 +10,11 @@ export class Post {
   @Prop() imageUrl?: string;
   @Prop({ type: [{ type: Types.ObjectId, ref: User.name }], default: [] }) likes!: Types.ObjectId[];
   @Prop({ default: 0 }) likesCount!: number;
+  @Prop({ type: Map, of: Number, select: false }) likesByDay?: Map<string, number>;
   @Prop({ type: Date, default: null, index: true }) deletedAt!: Date | null;
   createdAt!: Date;
 }
 export type PostDocument = HydratedDocument<Post>;
 export const PostSchema = SchemaFactory.createForClass(Post);
-PostSchema.index({ deletedAt: 1, createdAt: -1 });
-PostSchema.index({ deletedAt: 1, likesCount: -1, createdAt: -1 });
+PostSchema.index({ deletedAt: 1, createdAt: -1, _id: -1 });
+PostSchema.index({ deletedAt: 1, likesCount: -1, createdAt: -1, _id: -1 });

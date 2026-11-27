@@ -28,6 +28,9 @@ export class AdminService {
       posts: this.http.get<CountByLabel[]>(`${API_URL}/stats/posts-by-user`, options),
       days: this.http.get<DailyCount[]>(`${API_URL}/stats/comments-over-time`, options),
       comments: this.http.get<CountByLabel[]>(`${API_URL}/stats/comments-by-post`, options),
+      logins: this.http.get<CountByLabel[]>(`${API_URL}/stats/logins-by-user`, options),
+      profileVisits: this.http.get<DailyCount[]>(`${API_URL}/stats/profile-visits`, options),
+      likes: this.http.get<DailyCount[]>(`${API_URL}/stats/likes-by-day`, options),
     });
   }
 }

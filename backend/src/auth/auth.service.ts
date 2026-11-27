@@ -23,7 +23,14 @@ export class AuthService {
     const user = await this.users.findOne({ $or: [{ email: identifier }, { username: identifier }] }).select('+passwordHash') as UserDocument | null;
     if (!user || !await bcrypt.compare(dto.password, user.passwordHash)) throw new UnauthorizedException('Usuario o contraseña incorrectos.');
     if (!user.active) throw new UnauthorizedException('Esta cuenta está deshabilitada.');
-    return this.session(user);
+    const day = new Date().toISOString().slice(0, 10);
+    const account = await this.users.findOneAndUpdate(
+      { _id: user._id, active: { $ne: false }, passwordHash: user.passwordHash },
+      { $inc: { [`loginsByDay.${day}`]: 1 } },
+      { new: true },
+    ).exec();
+    if (!account) throw new UnauthorizedException('La cuenta cambió. Volvé a iniciar sesión.');
+    return this.session(account);
   }
 
   private async session(user: UserDocument) {

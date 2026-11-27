@@ -23,10 +23,18 @@
     <ol class="comment-list">
       @for (comment of comments(); track comment.id) {
         <li class="comment-entry">
-          @if (comment.author; as author) { <app-avatar [person]="author"/> }
+          @if (comment.author; as author) {
+            <a [routerLink]="['/perfiles', author.id]" [attr.aria-label]="'Ver perfil de ' + author.nombre + ' ' + author.apellido">
+              <app-avatar [person]="author"/>
+            </a>
+          }
           <div class="comment-content">
             <div class="comment-meta">
-              <strong>{{ comment.author ? comment.author.nombre + ' ' + comment.author.apellido : 'Cuenta no disponible' }}</strong>
+              @if (comment.author; as author) {
+                <a class="comment-author-link" [routerLink]="['/perfiles', author.id]"><strong>{{ author.nombre }} {{ author.apellido }}</strong></a>
+              } @else {
+                <strong>Cuenta no disponible</strong>
+              }
               <time [attr.datetime]="comment.createdAt">{{ comment.createdAt | date:'d MMM, HH:mm':'':'es-AR' }}</time>
               @if (comment.modificado) { <span class="comment-edited">Editado</span> }
               @if (editingId() !== comment.id && comment.author && comment.author.id === auth.user()?.id) {

@@ -1,6 +1,7 @@
-import { Component, DestroyRef, ElementRef, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnDestroy, OnInit, ViewChild, effect, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import type { Subscription } from 'rxjs';
 import { AuthService } from '../core/services/auth.service';
 import { errorMessage } from '../core/services/http-error';
 import { PostsService } from '../core/services/posts.service';
@@ -14,12 +15,18 @@ export class FeedPage implements OnInit, OnDestroy {
   @ViewChild('previewThumb') private previewThumb?: ElementRef<HTMLButtonElement>;
   @ViewChild('lightboxClose') private lightboxClose?: ElementRef<HTMLButtonElement>;
   @ViewChild('commentDialog', { static: true }) private commentDialog!: ElementRef<HTMLDialogElement>;
+  private readonly sentinel = viewChild<ElementRef<HTMLElement>>('feedSentinel');
   private readonly destroyRef = inject(DestroyRef);
-  readonly Math = Math;
   readonly maxImageMb = MAX_IMAGE_MB;
   readonly auth = inject(AuthService); private readonly postsApi = inject(PostsService); private readonly fb = inject(FormBuilder).nonNullable;
-  readonly pageSize = 5; readonly posts = signal<Post[]>([]); readonly total = signal(0); readonly offset = signal(0);
+  private readonly pageSize = 5;
+  private feedRequest?: Subscription;
+  private nextCursor: string | null = null;
+  private readonly removed = new Set<string>();
+  readonly posts = signal<Post[]>([]);
+  readonly hasMore = signal(true);
   readonly sort = signal<'date' | 'likes'>('date'); readonly loading = signal(false); readonly error = signal(''); readonly busyId = signal('');
+  readonly actionError = signal('');
   readonly showComposer = signal(false); readonly publishing = signal(false); readonly composerError = signal(''); readonly imageName = signal('');
   readonly imagePreviewUrl = signal<string | null>(null); readonly showImageLightbox = signal(false);
   readonly deleteTarget = signal<Post | null>(null); readonly toast = signal(''); private image: File | null = null;
@@ -31,20 +38,55 @@ export class FeedPage implements OnInit, OnDestroy {
     message: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(this.commentMaxLength)]],
   });
   private toastTimer?: ReturnType<typeof setTimeout>;
-  private loadVersion = 0;
   readonly draft = this.fb.group({ title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120), Validators.pattern(/\S/)]],
     description: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(3000), Validators.pattern(/\S/)]] });
+  constructor() {
+    effect(onCleanup => {
+      const marker = this.sentinel()?.nativeElement;
+      if (!marker || this.loading() || this.error() || !this.hasMore()) return;
+      const observer = new IntersectionObserver(entries => {
+        if (entries.some(entry => entry.isIntersecting)) this.load();
+      }, { rootMargin: '0px 0px 240px' });
+      observer.observe(marker);
+      onCleanup(() => observer.disconnect());
+    });
+  }
+
   ngOnInit() { this.load(); }
   ngOnDestroy() {
     this.clearSelectedImage();
     clearTimeout(this.toastTimer);
   }
-  load() { const version = ++this.loadVersion; this.loading.set(true); this.error.set(''); this.postsApi.list({ sort: this.sort(), offset: this.offset(), limit: this.pageSize }).subscribe({
-    next: page => { if (version !== this.loadVersion) return; this.posts.set(page.items); this.total.set(page.total); this.loading.set(false); },
-    error: error => { if (version !== this.loadVersion) return; this.error.set(errorMessage(error)); this.loading.set(false); },
-  }); }
-  setSort(sort: 'date' | 'likes') { if (this.sort() === sort) return; this.sort.set(sort); this.offset.set(0); this.load(); }
-  page(direction: number) { this.offset.update(value => Math.max(0, value + direction * this.pageSize)); this.load(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  load() {
+    if (this.loading() || !this.hasMore()) return;
+    this.loading.set(true);
+    this.error.set('');
+    this.feedRequest = this.postsApi.feed(this.sort(), this.pageSize, this.nextCursor)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: page => {
+          this.posts.update(current => {
+            const seen = new Set(current.map(post => post.id));
+            return [...current, ...page.items.filter(post => !seen.has(post.id) && !this.removed.has(post.id))];
+          });
+          this.nextCursor = page.nextCursor;
+          this.hasMore.set(page.nextCursor !== null);
+          this.loading.set(false);
+        },
+        error: error => { this.error.set(errorMessage(error)); this.loading.set(false); },
+      });
+  }
+
+  setSort(sort: 'date' | 'likes') {
+    if (this.sort() === sort) return;
+    this.feedRequest?.unsubscribe();
+    this.sort.set(sort);
+    this.posts.set([]);
+    this.nextCursor = null;
+    this.hasMore.set(true);
+    this.loading.set(false);
+    this.load();
+  }
   openComposer() { this.showComposer.set(true); }
   closeComposer() {
     if (this.publishing()) return;
@@ -78,13 +120,48 @@ export class FeedPage implements OnInit, OnDestroy {
   }
   publish() { this.draft.markAllAsTouched(); if (this.draft.invalid || this.publishing()) return;
     const data = new FormData(); const values = this.draft.getRawValue(); data.append('title', values.title.trim()); data.append('description', values.description.trim()); if (this.image) data.append('image', this.image);
-    this.publishing.set(true); this.composerError.set(''); this.postsApi.create(data).subscribe({ next: () => { this.publishing.set(false); this.closeComposer(); this.sort.set('date'); this.offset.set(0); this.load(); this.flash('Tu publicación ya es parte de Trama.'); },
+    this.publishing.set(true); this.composerError.set(''); this.postsApi.create(data).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: post => {
+        this.publishing.set(false);
+        this.closeComposer();
+        if (this.sort() === 'date') this.posts.update(items => [post, ...items.filter(item => item.id !== post.id)]);
+        else this.setSort('date');
+        this.flash('Tu publicación ya es parte de Trama.');
+      },
       error: error => { this.composerError.set(errorMessage(error)); this.publishing.set(false); } }); }
-  toggleLike(post: Post) { this.busyId.set(post.id); const action = post.likedByMe ? this.postsApi.unlike(post.id) : this.postsApi.like(post.id);
-    action.subscribe({ next: updated => { this.posts.update(items => items.map(item => item.id === updated.id ? updated : item)); this.busyId.set(''); if (this.sort() === 'likes') this.load(); },
-      error: error => { this.error.set(errorMessage(error)); this.busyId.set(''); } }); }
-  confirmDelete(post: Post) { this.busyId.set(post.id); this.postsApi.remove(post.id).subscribe({ next: () => { this.busyId.set(''); this.deleteTarget.set(null); if (this.offset() > 0 && this.posts().length === 1) this.offset.update(value => Math.max(0, value - this.pageSize)); this.load(); this.flash('Publicación eliminada.'); },
-    error: error => { this.busyId.set(''); this.deleteTarget.set(null); this.error.set(errorMessage(error)); } }); }
+
+  toggleLike(post: Post) {
+    if (this.busyId()) return;
+    this.busyId.set(post.id);
+    this.actionError.set('');
+    const action = post.likedByMe ? this.postsApi.unlike(post.id) : this.postsApi.like(post.id);
+    action.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: updated => {
+        this.posts.update(items => {
+          const result = items.map(item => item.id === updated.id ? updated : item);
+          return this.sort() === 'likes' ? result.sort((a, b) =>
+            b.likesCount - a.likesCount || b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id)) : result;
+        });
+        this.busyId.set('');
+      },
+      error: error => { this.actionError.set(errorMessage(error)); this.busyId.set(''); },
+    });
+  }
+
+  confirmDelete(post: Post) {
+    if (this.busyId()) return;
+    this.busyId.set(post.id);
+    this.actionError.set('');
+    this.postsApi.remove(post.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.removed.add(post.id);
+        this.posts.update(items => items.filter(item => item.id !== post.id));
+        this.busyId.set('');
+        this.deleteTarget.set(null);
+        this.flash('Publicación eliminada.');
+      },
+      error: error => { this.busyId.set(''); this.deleteTarget.set(null); this.actionError.set(errorMessage(error)); },
+    });
+  }
 
   openComment(post: Post) {
     if (this.commentDialog.nativeElement.open) return;

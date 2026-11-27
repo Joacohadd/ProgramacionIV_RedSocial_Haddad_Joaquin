@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, DestroyRef, ElementRef, OnInit, inject, input, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { PostComment } from '../core/models';
 import { AuthService } from '../core/services/auth.service';
 import { errorMessage } from '../core/services/http-error';
@@ -11,7 +12,7 @@ import { Avatar } from './ui';
 @Component({
   selector: 'app-post-comments',
   standalone: true,
-  imports: [Avatar, DatePipe, ReactiveFormsModule],
+  imports: [Avatar, DatePipe, ReactiveFormsModule, RouterLink],
   templateUrl: './post-comments.html',
 })
 export class PostComments implements OnInit {

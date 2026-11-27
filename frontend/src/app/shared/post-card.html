@@ -4,11 +4,13 @@
     <span class="post-date">{{ post.createdAt | date:'dd MMM yyyy':'':'es-AR' }}</span>
   </div>
   <div class="post-author">
-    <app-avatar [person]="post.author"/>
-    <div>
-      <strong>{{ post.author.nombre }} {{ post.author.apellido }}</strong>
-      <span>＠{{ post.author.username }}</span>
-    </div>
+    <a class="post-author-link" [routerLink]="['/perfiles', post.author.id]">
+      <app-avatar [person]="post.author"/>
+      <div>
+        <strong>{{ post.author.nombre }} {{ post.author.apellido }}</strong>
+        <span>＠{{ post.author.username }}</span>
+      </div>
+    </a>
     <span class="author-spark" aria-hidden="true">✳</span>
   </div>
   @if (expanded) {

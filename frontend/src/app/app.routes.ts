@@ -12,6 +12,7 @@ export const routes: Routes = [
   { path: 'publicaciones', loadComponent: () => import('./pages/feed.page').then(component => component.FeedPage), canActivate: [authGuard] },
   { path: 'publicaciones/:id', loadComponent: () => import('./pages/post-detail.page').then(component => component.PostDetailPage), canActivate: [authGuard] },
   { path: 'mi-perfil', loadComponent: () => import('./pages/profile.page').then(component => component.ProfilePage), canActivate: [authGuard] },
+  { path: 'perfiles/:id', loadComponent: () => import('./pages/profile.page').then(component => component.ProfilePage), canActivate: [authGuard] },
   { path: 'dashboard/usuarios', loadComponent: () => import('./pages/admin/users.page').then(component => component.AdminUsersPage), canActivate: [authGuard, adminGuard] },
   { path: 'dashboard/estadisticas', loadComponent: () => import('./pages/admin/stats.page').then(component => component.AdminStatsPage), canActivate: [authGuard, adminGuard] },
   { path: '**', redirectTo: 'publicaciones' },

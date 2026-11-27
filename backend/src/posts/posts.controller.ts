@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, Post, Query, Req, UploadedFile, U
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MAX_IMAGE_BYTES } from '../common/image-limits';
 import { AuthenticatedRequest, SessionGuard } from '../auth/session.guard';
-import { CreatePostDto, ListPostsDto } from './post.dto';
+import { CreatePostDto, FeedPostsDto, ListPostsDto } from './post.dto';
 import { PostsService } from './posts.service';
 
 @Controller('posts') @UseGuards(SessionGuard)
@@ -10,6 +10,11 @@ export class PostsController {
   constructor(private readonly posts: PostsService) {}
 
   @Get() list(@Query() query: ListPostsDto, @Req() req: AuthenticatedRequest) { return this.posts.list(query, req.actor); }
+
+  @Get('feed')
+  feed(@Query() query: FeedPostsDto, @Req() req: AuthenticatedRequest) {
+    return this.posts.feed(query, req.actor);
+  }
 
   @Get(':id')
   detail(@Param('id') id: string, @Req() req: AuthenticatedRequest) {

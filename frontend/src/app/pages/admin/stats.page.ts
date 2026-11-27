@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -7,12 +6,13 @@ import { errorMessage } from '../../core/services/http-error';
 import { ExcerptPipe } from '../../shared/trama-pipes';
 import { SiteHeader } from '../../shared/ui';
 import { DashboardHeader } from './dashboard-header';
+import { DailyActivityChart, RankedActivityChart } from './activity-charts';
 
 const day = 86_400_000;
 const chartColors = ['#3048d8', '#c7df40', '#f39874', '#6387b8', '#884578', '#2e806b', '#d1d7e7'];
 
 @Component({
-  imports: [SiteHeader, DashboardHeader, DatePipe, ReactiveFormsModule, ExcerptPipe],
+  imports: [SiteHeader, DashboardHeader, ReactiveFormsModule, ExcerptPipe, DailyActivityChart, RankedActivityChart],
   templateUrl: './stats.page.html',
 })
 export class AdminStatsPage implements OnInit {
@@ -27,33 +27,12 @@ export class AdminStatsPage implements OnInit {
   readonly posts = signal<CountByLabel[]>([]);
   readonly days = signal<DailyCount[]>([]);
   readonly comments = signal<CountByLabel[]>([]);
+  readonly logins = signal<CountByLabel[]>([]);
+  readonly profileVisits = signal<DailyCount[]>([]);
+  readonly likes = signal<DailyCount[]>([]);
   readonly loading = signal(false);
   readonly error = signal('');
-  readonly postTotal = computed(() => this.posts().reduce((sum, row) => sum + row.count, 0));
   readonly commentTotal = computed(() => this.days().reduce((sum, row) => sum + row.count, 0));
-  readonly maxPosts = computed(() => this.posts().reduce((max, row) => Math.max(max, row.count), 1));
-  readonly maxDaily = computed(() => this.days().reduce((max, row) => Math.max(max, row.count), 1));
-  readonly linePoints = computed(() => {
-    const range = this.range();
-    const rows = this.days();
-    if (!range || !rows.length) return [];
-    const first = Date.parse(range.from);
-    const last = Date.parse(range.to);
-    const positions = new Map<number, number>([[first, 0], [last, 0]]);
-    for (const { date, count } of rows) {
-      const time = Date.parse(date);
-      if (time > first && !positions.has(time - day)) positions.set(time - day, 0);
-      if (time < last && !positions.has(time + day)) positions.set(time + day, 0);
-      positions.set(time, count);
-    }
-    return [...positions].sort(([a], [b]) => a - b).map(([date, count]) => ({
-      x: first === last ? 350 : 20 + (date - first) * 660 / (last - first),
-      y: 155 - count * 130 / this.maxDaily(),
-      count,
-      date,
-    }));
-  });
-  readonly polyline = computed(() => this.linePoints().map(({ x, y }) => `${x},${y}`).join(' '));
   readonly slices = computed(() => {
     const rows = this.comments();
     const visible = rows.slice(0, 6);
@@ -92,6 +71,9 @@ export class AdminStatsPage implements OnInit {
         this.posts.set(data.posts);
         this.days.set(data.days);
         this.comments.set(data.comments);
+        this.logins.set(data.logins);
+        this.profileVisits.set(data.profileVisits);
+        this.likes.set(data.likes);
         this.range.set(range);
         this.loading.set(false);
       },
